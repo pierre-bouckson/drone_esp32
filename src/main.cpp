@@ -25,6 +25,8 @@ drone_connect drone;
 imu_sensor my_imu;
 motor_controller my_motors;
 
+msg_rc msg_rc_;
+
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -55,12 +57,25 @@ void loop() {
   const char* msg = drone.read_msg();
   if(strcmp(msg, "command") == 0){
       digitalWrite(LED_BUILTIN, HIGH);
-      if(drone.answer("ok", 43127) == true){
+      if(drone.answer("ok", 8894) == true){
         Serial.println("answer send");
       } else {
         Serial.println("Error send answer");
       }
   }
+  int left, forward, up, yaw;
+  if (strncmp(msg, "rc", 2) == 0) {
+    Serial.println("msg rc detecter");
+    if(sscanf(msg, "rc %d %d %d %d", &left, &forward, &up, &yaw) == 4){
+      msg_rc_.left = left;
+      msg_rc_.forward = forward;
+      msg_rc_.up = up;
+      msg_rc_.yaw = yaw;
+      Serial.print("CMD RECU : ");
+      Serial.println(msg_rc_.left);
+    }
+  }
+  
 
   
 
@@ -70,7 +85,7 @@ void loop() {
   Serial.print("    y : ");
   Serial.println(to_print.pitch_deg);
 
-  my_motors.send_cmd(my_motors.stability());
+  my_motors.send_cmd();
   
   
   delay(500);

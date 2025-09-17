@@ -4,6 +4,7 @@
 #include <WiFiUdp.h>
 #include "pid.h"
 #include "imu.h"
+#include "Wifi_com.h"
 
 struct motor_cmd {
   int motor_1_duty;
@@ -12,7 +13,7 @@ struct motor_cmd {
   int motor_4_duty;
 };
 
-
+extern msg_rc msg_rc_;
 
 class motor_controller {
 
@@ -37,15 +38,17 @@ private:
 
     imu_sensor imu_;                // ton objet IMU
     pid pid_orientation_;    // ton contrôleur PID
-    motor_cmd commande_;
+    motor_cmd commande_stability_;
+    motor_cmd commande_rc_;
+    motor_cmd commande_final;
 
 
 
 public:
     void motor_init();
-    void cmd_vel(int x, int y, int h, int yaw);
+    motor_cmd cmd_vel();
     motor_cmd stability();
-    void send_cmd(motor_cmd commandee);
+    void send_cmd();
 
 
     

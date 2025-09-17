@@ -22,28 +22,41 @@ void motor_controller::motor_init() {
 }
 
 
-void motor_controller::cmd_vel(int x, int y, int h, int yaw) {
-    
-  
+motor_cmd motor_controller::cmd_vel() {
+
+    commande_rc_.motor_1_duty = msg_rc_.up;
+    commande_rc_.motor_2_duty = msg_rc_.up;
+    commande_rc_.motor_3_duty = msg_rc_.up;
+    commande_rc_.motor_4_duty = msg_rc_.up;
+
+    return commande_rc_;
 }
 
 motor_cmd motor_controller::stability() {
 
-
     const data_imu orientation = imu_.get_orientation();
-    commande_.motor_1_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
+    commande_stability_.motor_1_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
     // commande.motor_1_duty = static_cast<int>(pid_orientation_.PID_output(data_imu imu.get_orientation()));
     // commande.motor_2_duty = PID_orientation_y + PID_accelero_y;
     // commande.motor_3_duty = PID_orientation_x + PID_accelero_x;
     // commande.motor_4_duty = PID_orientation_y + PID_accelero_y;
 
-    return commande_;
+    return commande_stability_;
 }
 
-void motor_controller::send_cmd(motor_cmd commande) {
+void motor_controller::send_cmd() {
 
-    ledcWrite(ledChannel, commande.motor_1_duty);
-    ledcWrite(ledChanne2, commande.motor_2_duty);
-    ledcWrite(ledChanne3, commande.motor_3_duty);
-    ledcWrite(ledChanne4, commande.motor_4_duty);
+    commande_final.motor_1_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
+    commande_final.motor_2_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
+    commande_final.motor_3_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
+    commande_final.motor_4_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
+
+    Serial.print("duty 1 : ");
+    Serial.println(commande_final.motor_1_duty);
+
+
+    ledcWrite(ledChannel, commande_final.motor_1_duty);
+    ledcWrite(ledChanne2, commande_final.motor_2_duty);
+    ledcWrite(ledChanne3, commande_final.motor_3_duty);
+    ledcWrite(ledChanne4, commande_final.motor_4_duty);
 }

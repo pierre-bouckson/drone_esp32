@@ -4,6 +4,15 @@
 #include <WiFiUdp.h>
 
 
+struct msg_rc
+{
+    int left;
+    int forward;
+    int up;
+    int yaw;
+};
+
+
 class drone_connect {
 
 private:
