@@ -83,7 +83,7 @@ void loop() {
   Serial.print("x : ");
   Serial.print(to_print.roll_deg);
   Serial.print("    y : ");
-  Serial.println(to_print.pitch_deg);
+  Serial.print(to_print.pitch_deg);
 
   my_motors.send_cmd();
   

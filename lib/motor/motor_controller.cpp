@@ -35,23 +35,25 @@ motor_cmd motor_controller::cmd_vel() {
 motor_cmd motor_controller::stability() {
 
     const data_imu orientation = imu_.get_orientation();
-    commande_stability_.motor_1_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
-    // commande.motor_1_duty = static_cast<int>(pid_orientation_.PID_output(data_imu imu.get_orientation()));
-    // commande.motor_2_duty = PID_orientation_y + PID_accelero_y;
-    // commande.motor_3_duty = PID_orientation_x + PID_accelero_x;
-    // commande.motor_4_duty = PID_orientation_y + PID_accelero_y;
+    commande_stability_ = pid_orientation_.PID_output(orientation);
+    // commande_stability_.motor_1_duty = PID_output(orientation).motor_1_duty;
+
+
+    // commande_stability_.motor_2_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
+    // commande_stability_.motor_3_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
+    // commande_stability_.motor_4_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
 
     return commande_stability_;
 }
 
 void motor_controller::send_cmd() {
 
-    commande_final.motor_1_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
-    commande_final.motor_2_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
-    commande_final.motor_3_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
-    commande_final.motor_4_duty = stability().motor_1_duty + cmd_vel().motor_1_duty;
+    commande_final.motor_1_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
+    commande_final.motor_2_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
+    commande_final.motor_3_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
+    commande_final.motor_4_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
 
-    Serial.print("duty 1 : ");
+    Serial.print("      duty 1 : ");
     Serial.println(commande_final.motor_1_duty);
 
 

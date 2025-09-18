@@ -2,26 +2,24 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include "pid.h"
+
 #include "imu.h"
 #include "Wifi_com.h"
+#include "motor_types.h"
+#include "pid.h"
 
-struct motor_cmd {
-  int motor_1_duty;
-  int motor_2_duty;
-  int motor_3_duty;
-  int motor_4_duty;
-};
+
 
 extern msg_rc msg_rc_;
+
 
 class motor_controller {
 
 private:
     int PIN_motor_1 = 23;
-    int PIN_motor_2 = 0;
-    int PIN_motor_3 = 12;
-    int PIN_motor_4 = 32;
+    int PIN_motor_2 = 15;
+    int PIN_motor_3 = 13;
+    int PIN_motor_4 = 34;
     const int freq = 50000;
     const int resolution = 8;
 
