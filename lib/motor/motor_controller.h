@@ -19,7 +19,7 @@ private:
     int PIN_motor_1 = 23;
     int PIN_motor_2 = 15;
     int PIN_motor_3 = 13;
-    int PIN_motor_4 = 34;
+    int PIN_motor_4 = 33;
     const int freq = 50000;
     const int resolution = 8;
 

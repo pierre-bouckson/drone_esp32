@@ -88,7 +88,6 @@ void loop() {
   my_motors.send_cmd();
   
   
-  delay(500);
  
 }
 

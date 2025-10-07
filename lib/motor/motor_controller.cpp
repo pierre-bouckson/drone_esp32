@@ -24,10 +24,12 @@ void motor_controller::motor_init() {
 
 motor_cmd motor_controller::cmd_vel() {
 
-    commande_rc_.motor_1_duty = msg_rc_.up;
-    commande_rc_.motor_2_duty = msg_rc_.up;
-    commande_rc_.motor_3_duty = msg_rc_.up;
-    commande_rc_.motor_4_duty = msg_rc_.up;
+    commande_rc_.motor_1_duty = msg_rc_.up * 2.5 - msg_rc_.forward * 0.5 - msg_rc_.left * 0.5;
+    commande_rc_.motor_2_duty = msg_rc_.up * 2.5 + msg_rc_.forward * 0.5 - msg_rc_.left * 0.5;
+    commande_rc_.motor_3_duty = msg_rc_.up * 2.5 + msg_rc_.forward * 0.5 + msg_rc_.left * 0.5;
+    commande_rc_.motor_4_duty = msg_rc_.up * 2.5 - msg_rc_.forward * 0.5 + msg_rc_.left * 0.5;
+
+
 
     return commande_rc_;
 }
@@ -48,13 +50,14 @@ motor_cmd motor_controller::stability() {
 
 void motor_controller::send_cmd() {
 
-    commande_final.motor_1_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
-    commande_final.motor_2_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
-    commande_final.motor_3_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
-    commande_final.motor_4_duty = stability().motor_1_duty * 1 + cmd_vel().motor_1_duty * 1;
+    commande_final.motor_1_duty = -stability().motor_1_duty * 5 + cmd_vel().motor_1_duty;
+    commande_final.motor_2_duty = -stability().motor_2_duty * 5 + cmd_vel().motor_2_duty;
+    commande_final.motor_3_duty = -stability().motor_3_duty * 5 + cmd_vel().motor_3_duty;
+    commande_final.motor_4_duty = -stability().motor_4_duty * 5 + cmd_vel().motor_4_duty;
 
     Serial.print("      duty 1 : ");
     Serial.println(commande_final.motor_1_duty);
+
 
 
     ledcWrite(ledChannel, commande_final.motor_1_duty);
