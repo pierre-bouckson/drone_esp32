@@ -75,19 +75,26 @@ void loop() {
       Serial.println(msg_rc_.left);
     }
   }
-  
 
-  
-
-  data_imu to_print =  my_imu.get_orientation();
+  data_imu to_print =  my_imu.get_gyro();
   Serial.print("x : ");
   Serial.print(to_print.roll_deg);
   Serial.print("    y : ");
   Serial.print(to_print.pitch_deg);
+  
+
+  
+
+  // data_imu to_print =  my_imu.get_orientation();
+  // Serial.print("x : ");
+  // Serial.print(to_print.roll_deg);
+  // Serial.print("    y : ");
+  // Serial.print(to_print.pitch_deg);
 
   my_motors.send_cmd();
   
   
+  delay(200);
  
 }
 

@@ -34,11 +34,30 @@ private:
     int duty3 = 0;
     int duty4 = 0;
 
+    int trottle = 0;
+    unsigned long last_time = 0;
+
+    float erreur_pitch = 0;
+    float erreur_roll = 0;
+
+    float rate_sp_pitch = 0;
+    float rate_sp_roll = 0;
+
+    float erreur_rate_pitch = 0;
+    float erreur_rate_roll = 0;
+
+    float cmd_motor_pitch = 0;
+    float cmd_motor_roll = 0;
+
+
     imu_sensor imu_;                // ton objet IMU
-    pid pid_orientation_;    // ton contrôleur PID
+    pid pid_;    // ton contrôleur PID
     motor_cmd commande_stability_;
     motor_cmd commande_rc_;
     motor_cmd commande_final;
+
+    motor_cmd cmd_motor_rate;
+    data_imu erreur_rate;
 
 
 

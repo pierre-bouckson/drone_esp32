@@ -17,7 +17,11 @@ private:
     coef_pid coef_accelero = {0, 0, 0};
 
 public:
-    motor_cmd PID_output(data_imu intput);
+    motor_cmd trad_motor(data_imu intput);
+    float pi_attitude_pitch(float erreur, float kp, float ki, float dt);
+    float pi_attitude_roll(float erreur, float kp, float ki, float dt);
+    float pid_rate_pitch(float erreur, float kp, float ki, float kd, float dt);
+    float pid_rate_roll(float erreur, float kp, float ki, float kd, float dt);
     
     
 };

@@ -4,6 +4,7 @@
 #include <MPU9250_WE.h> 
 #include <math.h>
 
+extern bool emergency;
 
 extern const uint8_t MPU6500_ADDR;
 extern MPU6500_WE myMPU6500;
@@ -19,6 +20,8 @@ extern data_imu orientation;
 extern float last_mes;
 
 
+
+
 class imu_sensor {
 
 private:
@@ -26,12 +29,14 @@ private:
     float roll = 0;
     float pitch = 0;
     float yaw = 0;
+    data_imu gyro_fast;
 
 
 
 public:
     bool IMU_init();
     data_imu get_orientation();
+    data_imu get_gyro();
 
     
 };

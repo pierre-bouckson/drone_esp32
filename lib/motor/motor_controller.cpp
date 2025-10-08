@@ -36,32 +36,77 @@ motor_cmd motor_controller::cmd_vel() {
 
 motor_cmd motor_controller::stability() {
 
-    const data_imu orientation = imu_.get_orientation();
-    commande_stability_ = pid_orientation_.PID_output(orientation);
-    // commande_stability_.motor_1_duty = PID_output(orientation).motor_1_duty;
-
-
-    // commande_stability_.motor_2_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
-    // commande_stability_.motor_3_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
-    // commande_stability_.motor_4_duty = static_cast<int>(pid_orientation_.PID_output(orientation));
+    data_imu gyro = imu_.get_gyro();
+    commande_stability_ = pid_.trad_motor(gyro);
 
     return commande_stability_;
 }
 
 void motor_controller::send_cmd() {
 
-    commande_final.motor_1_duty = -stability().motor_1_duty * 5 + cmd_vel().motor_1_duty;
-    commande_final.motor_2_duty = -stability().motor_2_duty * 5 + cmd_vel().motor_2_duty;
-    commande_final.motor_3_duty = -stability().motor_3_duty * 5 + cmd_vel().motor_3_duty;
-    commande_final.motor_4_duty = -stability().motor_4_duty * 5 + cmd_vel().motor_4_duty;
 
-    Serial.print("      duty 1 : ");
-    Serial.println(commande_final.motor_1_duty);
+    // while(emergency){
+
+    //     digitalWrite(2, LOW);
+
+    //     ledcWrite(ledChannel, 0);
+    //     ledcWrite(ledChanne2, 0);
+    //     ledcWrite(ledChanne3, 0);
+    //     ledcWrite(ledChanne4, 0);
 
 
+    // }
+
+
+
+    //Verifier Coeherence angle (deg rad, where forward, ...)
+
+
+    data_imu gyro = imu_.get_gyro();
+    data_imu orientation = imu_.get_orientation();
+
+    unsigned long now = micros();
+
+    if (last_time == 0) { 
+        last_time = now; 
+        return;              // on attend le prochain tour pour avoir un vrai dt
+    }
+
+    
+    float dt = (now - last_time) / 1000000.0f;
+    last_time = now;
+
+
+    erreur_pitch = msg_rc_.forward - orientation.pitch_deg;
+    erreur_roll = msg_rc_.left - orientation.roll_deg;
+
+    rate_sp_pitch = pid_.pi_attitude_pitch(erreur_pitch, 1, 1, dt);
+    rate_sp_roll  = pid_.pi_attitude_roll(erreur_roll, 1, 1, dt);
+
+    erreur_rate_pitch = rate_sp_pitch - gyro.pitch_deg;
+    erreur_rate_roll = rate_sp_roll - gyro.roll_deg;
+
+    cmd_motor_pitch = pid_.pid_rate_pitch(erreur_rate_pitch, 1,1,1,dt);
+    cmd_motor_roll = pid_.pid_rate_roll(erreur_rate_roll, 1,1,1,dt);
+
+
+    erreur_rate.pitch_deg = cmd_motor_pitch;
+    erreur_rate.roll_deg = cmd_motor_roll;
+
+    cmd_motor_rate = pid_.trad_motor(erreur_rate);
+
+
+
+    trottle = msg_rc_.up;
+
+    commande_final.motor_1_duty = trottle * 2.5 - cmd_motor_rate.motor_1_duty * 0.5;
+    commande_final.motor_2_duty = trottle * 2.5 + cmd_motor_rate.motor_2_duty * 0.5;
+    commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty * 0.5;
+    commande_final.motor_4_duty = trottle * 2.5 - cmd_motor_rate.motor_4_duty * 0.5;
 
     ledcWrite(ledChannel, commande_final.motor_1_duty);
     ledcWrite(ledChanne2, commande_final.motor_2_duty);
     ledcWrite(ledChanne3, commande_final.motor_3_duty);
     ledcWrite(ledChanne4, commande_final.motor_4_duty);
+
 }

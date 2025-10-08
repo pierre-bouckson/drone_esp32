@@ -1,9 +1,12 @@
 #include "imu.h"
 
+bool emergency = 0;
+
 const uint8_t MPU6500_ADDR = 0x68;
 MPU6500_WE myMPU6500(MPU6500_ADDR);
 
 data_imu orientation = {0.0f, 0.0f, 0.0f};
+
 
 bool imu_sensor::IMU_init() {
     
@@ -41,8 +44,6 @@ data_imu imu_sensor::get_orientation() {
   orientation.pitch_deg = gyr.y;
   orientation.yaw_deg = gyr.z;
 
-
-
   float roll_acc  = atan2( gValue.y, gValue.z );
   float pitch_acc = atan2( -gValue.x, sqrt(gValue.y * gValue.y + gValue.z * gValue.z) );
 
@@ -68,7 +69,24 @@ data_imu imu_sensor::get_orientation() {
   orientation.pitch_deg = pitch;
   orientation.yaw_deg = yaw;
 
+  if(abs(roll) > 10 || abs(pitch) > 10){
+    emergency = 1;
+  }
+
 
 
   return orientation;
+}
+
+
+data_imu imu_sensor::get_gyro(){
+
+  xyzFloat gyr = myMPU6500.getGyrValues();
+
+  gyro_fast.roll_deg = gyr.x;
+  gyro_fast.pitch_deg = gyr.y;
+
+
+  return gyro_fast; 
+
 }
