@@ -46,8 +46,6 @@ private:
     float erreur_rate_pitch = 0;
     float erreur_rate_roll = 0;
 
-    float cmd_motor_pitch = 0;
-    float cmd_motor_roll = 0;
 
 
     imu_sensor imu_;                // ton objet IMU

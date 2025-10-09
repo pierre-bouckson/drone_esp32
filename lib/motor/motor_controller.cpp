@@ -77,8 +77,8 @@ void motor_controller::send_cmd() {
     last_time = now;
 
 
-    erreur_pitch = msg_rc_.forward - orientation.pitch_deg;
-    erreur_roll = msg_rc_.left - orientation.roll_deg;
+    erreur_pitch = msg_rc_.forward/10 - orientation.pitch_deg;
+    erreur_roll = msg_rc_.left/10 - orientation.roll_deg;
 
     rate_sp_pitch = pid_.pi_attitude_pitch(erreur_pitch, 1, 1, dt);
     rate_sp_roll  = pid_.pi_attitude_roll(erreur_roll, 1, 1, dt);
@@ -86,12 +86,9 @@ void motor_controller::send_cmd() {
     erreur_rate_pitch = rate_sp_pitch - gyro.pitch_deg;
     erreur_rate_roll = rate_sp_roll - gyro.roll_deg;
 
-    cmd_motor_pitch = pid_.pid_rate_pitch(erreur_rate_pitch, 1,1,1,dt);
-    cmd_motor_roll = pid_.pid_rate_roll(erreur_rate_roll, 1,1,1,dt);
+    erreur_rate.pitch_deg = pid_.pid_rate_pitch(erreur_rate_pitch, 1,1,1,dt);
+    erreur_rate.roll_deg = pid_.pid_rate_roll(erreur_rate_roll, 1,1,1,dt);
 
-
-    erreur_rate.pitch_deg = cmd_motor_pitch;
-    erreur_rate.roll_deg = cmd_motor_roll;
 
     cmd_motor_rate = pid_.trad_motor(erreur_rate);
 
@@ -99,10 +96,10 @@ void motor_controller::send_cmd() {
 
     trottle = msg_rc_.up;
 
-    commande_final.motor_1_duty = trottle * 2.5 - cmd_motor_rate.motor_1_duty * 0.5;
+    commande_final.motor_1_duty = trottle * 2.5 + cmd_motor_rate.motor_1_duty * 0.5;
     commande_final.motor_2_duty = trottle * 2.5 + cmd_motor_rate.motor_2_duty * 0.5;
     commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty * 0.5;
-    commande_final.motor_4_duty = trottle * 2.5 - cmd_motor_rate.motor_4_duty * 0.5;
+    commande_final.motor_4_duty = trottle * 2.5 + cmd_motor_rate.motor_4_duty * 0.5;
 
     ledcWrite(ledChannel, commande_final.motor_1_duty);
     ledcWrite(ledChanne2, commande_final.motor_2_duty);
