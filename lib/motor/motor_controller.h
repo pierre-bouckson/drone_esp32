@@ -57,6 +57,8 @@ private:
     motor_cmd cmd_motor_rate;
     data_imu erreur_rate;
 
+    drone_connect my_connect;
+
 
 
 public:

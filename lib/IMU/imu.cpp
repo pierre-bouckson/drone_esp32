@@ -86,7 +86,6 @@ data_imu imu_sensor::get_gyro(){
   gyro_fast.roll_deg = gyr.x;
   gyro_fast.pitch_deg = gyr.y;
 
-
-  return gyro_fast; 
+  return gyro_fast;
 
 }

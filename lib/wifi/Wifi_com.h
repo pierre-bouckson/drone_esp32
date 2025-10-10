@@ -26,5 +26,6 @@ public:
     void init_wifi(const char* ssid, const char* pass, uint16_t port);
     const char* read_msg();
     bool answer(const char* msg, uint16_t port); 
+    bool answer_values(int v1, int v2, int v3, int v4, uint16_t port);
     
 };
