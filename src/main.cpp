@@ -19,7 +19,10 @@ int PIN_SDA = 21;
 int PIN_SLC = 22;
 float last_mes = 0;
 
+int gain;
 
+
+coef_pid coef_udp;
 
 drone_connect drone;
 imu_sensor my_imu;
@@ -63,6 +66,7 @@ void loop() {
         Serial.println("Error send answer");
       }
   }
+  
   int left, forward, up, yaw;
   if (strncmp(msg, "rc", 2) == 0) {
     Serial.println("msg rc detecter");
@@ -72,15 +76,35 @@ void loop() {
       msg_rc_.up = up;
       msg_rc_.yaw = yaw;
       Serial.print("CMD RECU : ");
-      Serial.println(msg_rc_.left);
+      Serial.println(msg_rc_.up);
     }
   }
 
-  data_imu to_print =  my_imu.get_gyro();
-  Serial.print("x : ");
-  Serial.print(to_print.roll_deg);
-  Serial.print("    y : ");
-  Serial.print(to_print.pitch_deg);
+
+
+  if (strncmp(msg, "gain", 4) == 0) {
+    Serial.println("msg gain detecter");
+    if(sscanf(msg, "gain %d", &gain) == 1){
+      Serial.print("GAIN RECU : ");
+      Serial.println(gain);
+    }
+  }
+
+
+  if (strncmp(msg, "pid", 3) == 0) {
+    Serial.println("msg pid detecter");
+    if(sscanf(msg, "pid %f %f %f", &coef_udp.kp, &coef_udp.ki, &coef_udp.kd) == 3){
+      Serial.print("PID RECU : ");
+      Serial.println(coef_udp.kp);
+    }
+  }
+
+
+  // data_imu to_print =  my_imu.get_gyro();
+  // Serial.print("x : ");
+  // Serial.print(to_print.roll_deg);
+  // Serial.print("    y : ");
+  // Serial.print(to_print.pitch_deg);
   
 
   
@@ -91,10 +115,9 @@ void loop() {
   // Serial.print("    y : ");
   // Serial.print(to_print.pitch_deg);
 
+
   my_motors.send_cmd();
   
-  
-  delay(200);
  
 }
 

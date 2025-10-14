@@ -41,12 +41,12 @@ bool drone_connect::answer(const char* msg, uint16_t port) {
     return true;
 }
 
-bool drone_connect::answer_values(int v1, int v2, int v3, int v4, uint16_t port) {
+bool drone_connect::answer_values(float v1, float v2, float v3, float v4, uint16_t port) {
     if (UDP.beginPacket("192.168.4.2", port) != 1) return false;
 
     // Format texte : "123,456,789,42\n"
     char buffer[64];
-    snprintf(buffer, sizeof(buffer), "%d,%d,%d,%d\n", v1, v2, v3, v4);
+    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f\n", v1, v2, v3, v4);
 
     UDP.print(buffer);
     UDP.endPacket();

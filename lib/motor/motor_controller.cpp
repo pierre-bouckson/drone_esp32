@@ -45,24 +45,22 @@ motor_cmd motor_controller::stability() {
 void motor_controller::send_cmd() {
 
 
-    // while(emergency){
+    while(emergency){
 
-    //     digitalWrite(2, LOW);
+        digitalWrite(2, LOW);
 
-    //     ledcWrite(ledChannel, 0);
-    //     ledcWrite(ledChanne2, 0);
-    //     ledcWrite(ledChanne3, 0);
-    //     ledcWrite(ledChanne4, 0);
+        ledcWrite(ledChannel, 0);
+        ledcWrite(ledChanne2, 0);
+        ledcWrite(ledChanne3, 0);
+        ledcWrite(ledChanne4, 0);
 
 
-    // }
+    }
 
 
 
     //Verifier Coeherence angle (deg rad, where forward, ...)
 
-
-    data_imu gyro = imu_.get_gyro();
     data_imu orientation = imu_.get_orientation();
 
     unsigned long now = micros();
@@ -75,19 +73,18 @@ void motor_controller::send_cmd() {
     
     float dt = (now - last_time) / 1000000.0f;
     last_time = now;
-
+    if (dt <= 0 || dt > 0.05f) {   // 50 ms
+        return; // skip ce tour
+    }
 
     erreur_pitch = msg_rc_.forward/10 - orientation.pitch_deg;
     erreur_roll = msg_rc_.left/10 - orientation.roll_deg;
 
-    rate_sp_pitch = pid_.pi_attitude_pitch(erreur_pitch, 5, 0.2, dt);
-    rate_sp_roll  = pid_.pi_attitude_roll(erreur_roll, 5, 0.2, dt);
 
-    erreur_rate_pitch = rate_sp_pitch - gyro.pitch_deg;
-    erreur_rate_roll = rate_sp_roll - gyro.roll_deg;
 
-    erreur_rate.pitch_deg = pid_.pid_rate_pitch(erreur_rate_pitch, 0.02, 0.04, 0.001,dt);
-    erreur_rate.roll_deg = pid_.pid_rate_roll(erreur_rate_roll, 0.02, 0.04, 0.001,dt);
+    erreur_rate.roll_deg = pid_.pid_rate_roll(erreur_roll, coef_udp, dt);
+    erreur_rate.pitch_deg = pid_.pid_rate_pitch(erreur_pitch, coef_udp, dt);
+
 
 
     cmd_motor_rate = pid_.trad_motor(erreur_rate);
@@ -96,12 +93,14 @@ void motor_controller::send_cmd() {
 
     trottle = msg_rc_.up;
 
-    commande_final.motor_1_duty = trottle * 2.5 + cmd_motor_rate.motor_1_duty * 0.5;
-    commande_final.motor_2_duty = trottle * 2.5 + cmd_motor_rate.motor_2_duty * 0.5;
-    commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty * 0.5;
-    commande_final.motor_4_duty = trottle * 2.5 + cmd_motor_rate.motor_4_duty * 0.5;
+    commande_final.motor_1_duty = trottle * 2.5 + cmd_motor_rate.motor_1_duty;
+    commande_final.motor_2_duty = trottle * 2.5 + cmd_motor_rate.motor_2_duty;
+    commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty;
+    commande_final.motor_4_duty = trottle * 2.5 + cmd_motor_rate.motor_4_duty;
 
-    my_connect.answer_values(commande_final.motor_1_duty, commande_final.motor_2_duty, commande_final.motor_3_duty, commande_final.motor_4_duty, 8895);
+    my_connect.answer_values(orientation.roll_deg, orientation.pitch_deg, commande_final.motor_1_duty, commande_final.motor_2_duty, 8895);     //Print via UDP
+
+    // my_connect.answer_values(commande_final.motor_1_duty, commande_final.motor_2_duty, commande_final.motor_3_duty, commande_final.motor_4_duty, 8895);
 
     ledcWrite(ledChannel, commande_final.motor_1_duty);
     ledcWrite(ledChanne2, commande_final.motor_2_duty);
@@ -109,3 +108,16 @@ void motor_controller::send_cmd() {
     ledcWrite(ledChanne4, commande_final.motor_4_duty);
 
 }
+
+
+    // erreur_pitch = msg_rc_.forward/10 - orientation.pitch_deg;
+    // erreur_roll = msg_rc_.left/10 - orientation.roll_deg;
+
+    // rate_sp_pitch = pid_.pi_attitude_pitch(erreur_pitch, 5, 0.2, dt);
+    // rate_sp_roll  = pid_.pi_attitude_roll(erreur_roll, 5, 0.2, dt);
+
+    // erreur_rate_pitch = rate_sp_pitch - gyro.pitch_deg;
+    // erreur_rate_roll = rate_sp_roll - gyro.roll_deg;
+
+    // erreur_rate.pitch_deg = pid_.pid_rate_pitch(erreur_rate_pitch, 0.02, 0.04, 0.001,dt);
+    // erreur_rate.roll_deg = pid_.pid_rate_roll(erreur_rate_roll, 0.02, 0.04, 0.001,dt);

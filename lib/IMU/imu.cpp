@@ -32,51 +32,66 @@ bool imu_sensor::IMU_init() {
 data_imu imu_sensor::get_orientation() {
   xyzFloat gValue = myMPU6500.getGValues();
   xyzFloat gyr = myMPU6500.getGyrValues();
+
   float temp = myMPU6500.getTemperature();
   float resultantG = myMPU6500.getResultantG(gValue);
 
+
+  float roll_acc  = atan2( gValue.y, gValue.z ) * (180.0 / PI);
+  float pitch_acc = atan2( -gValue.x, sqrt(gValue.y * gValue.y + gValue.z * gValue.z) )  * (180.0 / PI);
+
+  // if(first==1) {
+  //   float roll = roll_acc;
+  //   float pitch = pitch_acc;
+  //   float yaw = 0;
+  //   first = 0;
+  // }
 
   uint32_t now = micros();
   float dt = (now - last_mes) / 1e6f;
   last_mes = now;
 
-  orientation.roll_deg = gyr.x;
-  orientation.pitch_deg = gyr.y;
-  orientation.yaw_deg = gyr.z;
+  roll_gyro  += gyr.x * dt;
+  pitch_gyro += gyr.y * dt;
+  yaw_gyro   += gyr.z * dt;
 
-  float roll_acc  = atan2( gValue.y, gValue.z );
-  float pitch_acc = atan2( -gValue.x, sqrt(gValue.y * gValue.y + gValue.z * gValue.z) );
 
-  if(first==1) {
-    float roll = roll_acc;
-    float pitch = pitch_acc;
-    float yaw = 0;
-    first = 0;
+
+  float a = (float)gain / 10000.0f;
+
+  float gain_fusion = 0;
+
+  // alpha = τ/(τ+dt)                 // ← ajuste 0.3..1.0 s
+  float alpha = a / (a + dt);
+
+  roll = gain_fusion * roll_gyro + (1.0f-gain_fusion) * roll_acc;    //Fusion de capteur
+
+  pitch = gain_fusion * pitch_gyro + (1.0f-gain_fusion) * pitch_acc;
+
+
+
+  // roll  = alpha * roll_pred  + (1-alpha) * (roll_acc * (180.0 / PI));
+  // pitch = alpha * pitch_pred + (1-alpha) * (pitch_acc * (180.0 / PI));
+  // yaw   = yaw_pred;    // (pas de correction sans mag)
+
+
+  // orientation.roll_deg = roll;
+  // orientation.pitch_deg = pitch;
+  // orientation.yaw_deg = yaw;
+
+  if(abs(roll) > 50 || abs(pitch) > 50){
+    emergency = 0;
   }
-
-  float roll_pred  = roll + gyr.x * dt;
-  float pitch_pred = pitch + gyr.y * dt;
-  float yaw_pred   = yaw  + gyr.z * dt;
-
-  float alpha = 0.1;
-
-  roll  = alpha * roll_pred  + (1-alpha) * (roll_acc * (180.0 / PI));
-  pitch = alpha * pitch_pred + (1-alpha) * (pitch_acc * (180.0 / PI));
-  yaw   = yaw_pred;    // (pas de correction sans mag)
-
 
   orientation.roll_deg = roll;
   orientation.pitch_deg = pitch;
-  orientation.yaw_deg = yaw;
-
-  if(abs(roll) > 10 || abs(pitch) > 10){
-    emergency = 1;
-  }
 
 
 
   return orientation;
 }
+
+
 
 
 data_imu imu_sensor::get_gyro(){

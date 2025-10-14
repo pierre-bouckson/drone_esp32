@@ -9,7 +9,7 @@
 #include "pid.h"
 
 
-
+extern coef_pid coef_udp;
 extern msg_rc msg_rc_;
 
 
@@ -58,6 +58,7 @@ private:
     data_imu erreur_rate;
 
     drone_connect my_connect;
+
 
 
 

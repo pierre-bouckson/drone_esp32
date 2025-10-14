@@ -3,9 +3,9 @@
 #include "motor_types.h"
 
 struct coef_pid {
-  int kp;
-  int ki;
-  int kd;
+  float kp;
+  float ki;
+  float kd;
 };
 
 extern motor_cmd pid_duty_;
@@ -20,8 +20,8 @@ public:
     motor_cmd trad_motor(data_imu intput);
     float pi_attitude_pitch(float erreur, float kp, float ki, float dt);
     float pi_attitude_roll(float erreur, float kp, float ki, float dt);
-    float pid_rate_pitch(float erreur, float kp, float ki, float kd, float dt);
-    float pid_rate_roll(float erreur, float kp, float ki, float kd, float dt);
+    float pid_rate_pitch(float erreur, coef_pid pid, float dt);
+    float pid_rate_roll(float erreur, coef_pid pid, float dt);
     
     
 };

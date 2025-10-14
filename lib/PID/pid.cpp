@@ -24,7 +24,7 @@ float pid::pi_attitude_pitch(float erreur, float kp, float ki, float dt) {
 
 
     // PID
-    return kp * erreur + ki * somme_erreurs;
+    return kp * erreur ;//+ ki * somme_erreurs;
 }
 
 float pid::pi_attitude_roll(float erreur, float kp, float ki, float dt) {
@@ -36,10 +36,10 @@ float pid::pi_attitude_roll(float erreur, float kp, float ki, float dt) {
 
 
     // PID
-    return kp * erreur + ki * somme_erreurs;
+    return kp * erreur ;//+ ki * somme_erreurs;
 }
 
-float pid::pid_rate_pitch(float erreur, float kp, float ki, float kd, float dt) {
+float pid::pid_rate_pitch(float erreur, coef_pid pid, float dt) {
     static float erreur_prec = 0.0f;
     static float somme_erreurs = 0.0f;
 
@@ -51,10 +51,10 @@ float pid::pid_rate_pitch(float erreur, float kp, float ki, float kd, float dt) 
     erreur_prec = erreur;
 
     // PID
-    return kp * erreur + ki * somme_erreurs + kd * deriv;
+    return pid.kp * erreur + pid.ki * somme_erreurs + pid.kd * deriv;
 }
 
-float pid::pid_rate_roll(float erreur, float kp, float ki, float kd, float dt) {
+float pid::pid_rate_roll(float erreur, coef_pid pid, float dt) {
     static float erreur_prec = 0.0f;
     static float somme_erreurs = 0.0f;
 
@@ -66,5 +66,5 @@ float pid::pid_rate_roll(float erreur, float kp, float ki, float kd, float dt) {
     erreur_prec = erreur;
 
     // PID
-    return kp * erreur + ki * somme_erreurs + kd * deriv;
+    return pid.kp * erreur + pid.ki * somme_erreurs + pid.kd * deriv;
 }

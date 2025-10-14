@@ -3,11 +3,14 @@
 #include <Wire.h>
 #include <MPU9250_WE.h> 
 #include <math.h>
+#include "Wifi_com.h"
 
 extern bool emergency;
 
 extern const uint8_t MPU6500_ADDR;
 extern MPU6500_WE myMPU6500;
+
+extern int gain;
 
 struct data_imu {
   float roll_deg;     // rotation autour X
@@ -29,7 +32,15 @@ private:
     float roll = 0;
     float pitch = 0;
     float yaw = 0;
+
+    float roll_gyro = 0;
+    float pitch_gyro = 0;
+    float yaw_gyro = 0;
+
     data_imu gyro_fast;
+
+    drone_connect my_connect;
+
 
 
 
