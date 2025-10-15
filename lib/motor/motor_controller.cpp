@@ -98,7 +98,15 @@ void motor_controller::send_cmd() {
     commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty;
     commande_final.motor_4_duty = trottle * 2.5 + cmd_motor_rate.motor_4_duty;
 
-    my_connect.answer_values(orientation.roll_deg, orientation.pitch_deg, commande_final.motor_1_duty, commande_final.motor_2_duty, 8895);     //Print via UDP
+    if(commande_final.motor_1_duty > 255) commande_final.motor_1_duty = 255;
+    if(commande_final.motor_2_duty > 255) commande_final.motor_2_duty = 255;
+    if(commande_final.motor_3_duty > 255) commande_final.motor_3_duty = 255;
+    if(commande_final.motor_4_duty > 255) commande_final.motor_4_duty = 255;
+
+    if(commande_final.motor_1_duty < 0) commande_final.motor_1_duty = 0;
+    if(commande_final.motor_2_duty < 0) commande_final.motor_2_duty = 0;
+    if(commande_final.motor_3_duty < 0) commande_final.motor_3_duty = 0;
+    if(commande_final.motor_4_duty < 0) commande_final.motor_4_duty = 0;
 
     // my_connect.answer_values(commande_final.motor_1_duty, commande_final.motor_2_duty, commande_final.motor_3_duty, commande_final.motor_4_duty, 8895);
 

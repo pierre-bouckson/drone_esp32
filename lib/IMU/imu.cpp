@@ -59,16 +59,16 @@ data_imu imu_sensor::get_orientation() {
 
   float a = (float)gain / 10000.0f;
 
-  float gain_fusion = 0;
+  float alpha = 0.995;
 
-  // alpha = τ/(τ+dt)                 // ← ajuste 0.3..1.0 s
-  float alpha = a / (a + dt);
 
-  // Complementary Filter
+  // Complementary Filter   (Upgrade possible with Kalman filter)
 
-  roll = gain_fusion * (roll_gyro + roll) + (1.0f-gain_fusion) * roll_acc;    //Fusion de capteur
+  roll = alpha * (roll_gyro + roll) + (1.0f-alpha) * roll_acc;    //Fusion de capteur
 
-  pitch = gain_fusion * (pitch_gyro + pitch) + (1.0f-gain_fusion) * pitch_acc;
+  pitch = alpha * (pitch_gyro + pitch) + (1.0f-alpha) * pitch_acc;
+
+  my_connect.answer_values(roll, pitch, roll_acc, pitch_acc, 8895);     //Print via UDP
 
 
 
