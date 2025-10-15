@@ -1,7 +1,7 @@
 #pragma once
 // ---- WiFi credentials ----
-const char* ssid = "C'est mon wifi a moi";
-const char* password = "Mon mot de passe";
+const char* ssid = "peter_pan";
+const char* password = "pierre qui vole";
 
 // ---- UDP ports ----
 uint16_t localPort = 8889;
