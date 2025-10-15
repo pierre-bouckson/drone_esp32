@@ -51,9 +51,9 @@ data_imu imu_sensor::get_orientation() {
   float dt = (now - last_mes) / 1e6f;
   last_mes = now;
 
-  roll_gyro  += gyr.x * dt;
-  pitch_gyro += gyr.y * dt;
-  yaw_gyro   += gyr.z * dt;
+  roll_gyro  = gyr.x * dt;
+  pitch_gyro = gyr.y * dt;
+  yaw_gyro   = gyr.z * dt;
 
 
 
@@ -64,9 +64,11 @@ data_imu imu_sensor::get_orientation() {
   // alpha = τ/(τ+dt)                 // ← ajuste 0.3..1.0 s
   float alpha = a / (a + dt);
 
-  roll = gain_fusion * roll_gyro + (1.0f-gain_fusion) * roll_acc;    //Fusion de capteur
+  // Complementary Filter
 
-  pitch = gain_fusion * pitch_gyro + (1.0f-gain_fusion) * pitch_acc;
+  roll = gain_fusion * (roll_gyro + roll) + (1.0f-gain_fusion) * roll_acc;    //Fusion de capteur
+
+  pitch = gain_fusion * (pitch_gyro + pitch) + (1.0f-gain_fusion) * pitch_acc;
 
 
 
