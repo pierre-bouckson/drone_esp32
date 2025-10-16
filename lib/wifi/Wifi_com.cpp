@@ -46,7 +46,7 @@ bool drone_connect::answer_values(float v1, float v2, float v3, float v4, uint16
 
     // Format texte : "123,456,789,42\n"
     char buffer[64];
-    snprintf(buffer, sizeof(buffer), "%.2f,%.2f,%.2f,%.2f\n", v1, v2, v3, v4);
+    snprintf(buffer, sizeof(buffer), "%.6f,%.6f,%.6f,%.6f\n", v1, v2, v3, v4);
 
     UDP.print(buffer);
     UDP.endPacket();

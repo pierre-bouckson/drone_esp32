@@ -12,6 +12,8 @@
 extern coef_pid coef_udp;
 extern msg_rc msg_rc_;
 
+extern int motor1; 
+
 
 class motor_controller {
 

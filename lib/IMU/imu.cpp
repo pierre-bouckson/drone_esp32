@@ -37,8 +37,8 @@ data_imu imu_sensor::get_orientation() {
   float resultantG = myMPU6500.getResultantG(gValue);
 
 
-  float roll_acc  = atan2( gValue.y, gValue.z ) * (180.0 / PI);
-  float pitch_acc = atan2( -gValue.x, sqrt(gValue.y * gValue.y + gValue.z * gValue.z) )  * (180.0 / PI);
+  float roll_acc  = atan2( gValue.y, gValue.z );   // En Radian
+  float pitch_acc = atan2( -gValue.x, sqrt(gValue.y * gValue.y + gValue.z * gValue.z) );
 
   // if(first==1) {
   //   float roll = roll_acc;
@@ -51,24 +51,30 @@ data_imu imu_sensor::get_orientation() {
   float dt = (now - last_mes) / 1e6f;
   last_mes = now;
 
-  roll_gyro  = gyr.x * dt;
-  pitch_gyro = gyr.y * dt;
-  yaw_gyro   = gyr.z * dt;
+  p = gyr.x * (PI/180.0);  // en radian par seconde
+  q = gyr.y * (PI/180.0);
+  r = gyr.z * (PI/180.0);
 
+  roll_dot = p + q*sin(roll)*tan(pitch) + r*cos(roll)*tan(pitch);
+  pitch_dot = q*cos(roll) - r*sin(roll);
+
+  roll_gyro  = roll + roll_dot * dt;
+  pitch_gyro = pitch + pitch_dot * dt;
+  yaw_gyro   = r * dt;
 
 
   float a = (float)gain / 10000.0f;
 
-  float alpha = 0.995;
+  float alpha = 0.87;
 
 
   // Complementary Filter   (Upgrade possible with Kalman filter)
 
-  roll = alpha * (roll_gyro + roll) + (1.0f-alpha) * roll_acc;    //Fusion de capteur
+  roll = alpha * (roll_gyro) + (1.0f-alpha) * roll_acc;    //Fusion de capteur
 
-  pitch = alpha * (pitch_gyro + pitch) + (1.0f-alpha) * pitch_acc;
+  pitch = alpha * (pitch_gyro) + (1.0f-alpha) * pitch_acc;
 
-  my_connect.answer_values(roll, pitch, roll_acc, pitch_acc, 8895);     //Print via UDP
+  my_connect.answer_values(roll, motor1, roll_acc, roll_gyro, 8895);     //Print via UDP
 
 
 
@@ -81,7 +87,7 @@ data_imu imu_sensor::get_orientation() {
   // orientation.pitch_deg = pitch;
   // orientation.yaw_deg = yaw;
 
-  if(abs(roll) > 50 || abs(pitch) > 50){
+  if(abs(roll*(180/PI)) > 30 || abs(pitch*(180/PI)) > 50){
     emergency = 0;
   }
 

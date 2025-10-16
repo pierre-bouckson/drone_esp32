@@ -4,6 +4,7 @@
 #include <MPU9250_WE.h> 
 #include <math.h>
 #include "Wifi_com.h"
+#include "motor_types.h"
 
 extern bool emergency;
 
@@ -11,6 +12,7 @@ extern const uint8_t MPU6500_ADDR;
 extern MPU6500_WE myMPU6500;
 
 extern int gain;
+extern int motor1;
 
 struct data_imu {
   float roll_deg;     // rotation autour X
@@ -36,6 +38,14 @@ private:
     float roll_gyro = 0;
     float pitch_gyro = 0;
     float yaw_gyro = 0;
+
+    float p = 0;
+    float q = 0;
+    float r = 0;
+
+    float roll_dot = 0;
+    float pitch_dot = 0;
+
 
     data_imu gyro_fast;
 

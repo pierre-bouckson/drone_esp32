@@ -2,6 +2,7 @@
 #include "pid.h"
 #include "imu.h"
 
+int motor1 = 0;
 
 void motor_controller::motor_init() {
 
@@ -77,8 +78,8 @@ void motor_controller::send_cmd() {
         return; // skip ce tour
     }
 
-    erreur_pitch = msg_rc_.forward/10 - orientation.pitch_deg;
-    erreur_roll = msg_rc_.left/10 - orientation.roll_deg;
+    erreur_pitch = msg_rc_.forward/10 - (orientation.pitch_deg * (180/PI));
+    erreur_roll = msg_rc_.left/10 - (orientation.roll_deg * (180/PI));
 
 
 
@@ -98,6 +99,8 @@ void motor_controller::send_cmd() {
     commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty;
     commande_final.motor_4_duty = trottle * 2.5 + cmd_motor_rate.motor_4_duty;
 
+    motor1 = commande_final.motor_2_duty;
+
     if(commande_final.motor_1_duty > 255) commande_final.motor_1_duty = 255;
     if(commande_final.motor_2_duty > 255) commande_final.motor_2_duty = 255;
     if(commande_final.motor_3_duty > 255) commande_final.motor_3_duty = 255;
@@ -114,6 +117,8 @@ void motor_controller::send_cmd() {
     ledcWrite(ledChanne2, commande_final.motor_2_duty);
     ledcWrite(ledChanne3, commande_final.motor_3_duty);
     ledcWrite(ledChanne4, commande_final.motor_4_duty);
+
+    
 
 }
 

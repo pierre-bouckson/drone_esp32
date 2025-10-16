@@ -6,3 +6,5 @@ struct motor_cmd {
   int motor_3_duty;
   int motor_4_duty;
 };
+
+extern int motor1;
