@@ -22,7 +22,7 @@ private:
     int PIN_motor_2 = 15;
     int PIN_motor_3 = 13;
     int PIN_motor_4 = 33;
-    const int freq = 50000;
+    const int freq = 32000;
     const int resolution = 8;
 
     // Init 4 channel for 4 different duty cycle 
