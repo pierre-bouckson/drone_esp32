@@ -13,6 +13,7 @@ extern MPU6500_WE myMPU6500;
 
 extern int gain;
 extern int motor1;
+extern int motor2;
 
 struct data_imu {
   float roll_deg;     // rotation autour X

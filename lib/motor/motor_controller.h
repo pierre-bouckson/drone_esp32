@@ -10,6 +10,7 @@
 
 
 extern coef_pid coef_udp;
+
 extern msg_rc msg_rc_;
 
 extern int motor1; 
@@ -47,6 +48,8 @@ private:
 
     float erreur_rate_pitch = 0;
     float erreur_rate_roll = 0;
+
+    coef_pid coef = {1.41, 0.011,0.133};  //elice tello 
 
 
 

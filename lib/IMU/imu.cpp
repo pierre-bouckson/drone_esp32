@@ -65,7 +65,7 @@ data_imu imu_sensor::get_orientation() {
 
   float a = (float)gain / 10000.0f;
 
-  float alpha = 0.87;
+  float alpha = 0.97;
 
 
   // Complementary Filter   (Upgrade possible with Kalman filter)
@@ -74,7 +74,7 @@ data_imu imu_sensor::get_orientation() {
 
   pitch = alpha * (pitch_gyro) + (1.0f-alpha) * pitch_acc;
 
-  my_connect.answer_values(roll, motor1, roll_acc, roll_gyro, 8895);     //Print via UDP
+  my_connect.answer_values(roll, motor1, motor2, roll_acc, 8895);     //Print via UDP
 
 
 
