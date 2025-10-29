@@ -2,7 +2,7 @@
 
 
 
-void drone_connect::init_wifi(const char* ssid, const char* pass, uint16_t port) {
+void drone_connect::init_wifi(const char* ssid, const char* pass, uint16_t port, const char* otaPassword) {
     
     WiFi.mode(WIFI_AP);                               // Mode Point d'accès
     WiFi.softAP(ssid, pass);
@@ -11,7 +11,27 @@ void drone_connect::init_wifi(const char* ssid, const char* pass, uint16_t port)
     Serial.println(ip_esp);
 
     UDP.begin(port);
+
+     // --- ArduinoOTA ---
+    ArduinoOTA.setHostname("esp32-ota-ap");
+     ArduinoOTA.setPassword(otaPassword);
+    // Optionnel: choisir le port OTA (par défaut 3232)
+     // ArduinoOTA.setPort(3232);
+
+     ArduinoOTA
+       .onStart([]() { Serial.println("OTA Start"); })
+      .onEnd([]()   { Serial.println("\nOTA End"); })
+      .onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("OTA %u%%\r", (progress * 100) / total);
+      })
+      .onError([](ota_error_t error) {
+        Serial.printf("OTA Error[%u]\n", error);
+      });
+
+      ArduinoOTA.begin();
+     Serial.println("OTA Ready (AP mode).");
 }
+
 
 const char* drone_connect::read_msg() {
     
@@ -52,3 +72,4 @@ bool drone_connect::answer_values(float v1, float v2, float v3, float v4, uint16
     UDP.endPacket();
     return true;
 }
+

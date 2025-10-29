@@ -36,14 +36,14 @@ void setup() {
 
   delay(1000); 
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(LED_BUILTIN, HIGH);
   Serial.begin(115200);
   Serial.println("Console ready !");
 
 
   Wire.begin();
 
-  drone.init_wifi(ssid, password, localPort);     //Init Wifi 
+  drone.init_wifi(ssid, password, localPort, otaPassword);     //Init Wifi 
 
 
   if(my_imu.IMU_init()) Serial.println("IMU init");
@@ -55,6 +55,8 @@ void setup() {
 
 // the loop function runs over and over again forever
 void loop() {
+
+  ArduinoOTA.handle(); // OTA
 
 
   const char* msg = drone.read_msg();
