@@ -47,22 +47,6 @@ motor_cmd motor_controller::stability() {
 void motor_controller::send_cmd() {
 
 
-    while(emergency){
-
-        digitalWrite(2, LOW);
-
-        ledcWrite(ledChannel, 0);
-        ledcWrite(ledChanne2, 0);
-        ledcWrite(ledChanne3, 0);
-        ledcWrite(ledChanne4, 0);
-
-
-    }
-
-
-
-    //Verifier Coeherence angle (deg rad, where forward, ...)
-
     data_imu orientation = imu_.get_orientation();
 
     unsigned long now = micros();
