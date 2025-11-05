@@ -32,9 +32,9 @@ class imu_sensor {
 
 private:
     int first = 1;
-    float roll = 1;
-    float pitch = 1;
-    float yaw = 1;
+    float roll = 0;
+    float pitch = 0;
+    float yaw = 0;
 
     float roll_gyro = 0;
     float pitch_gyro = 0;

@@ -49,6 +49,12 @@ void motor_controller::send_cmd() {
 
     data_imu orientation = imu_.get_orientation();
 
+    if(emergency){
+        digitalWrite(2, LOW);
+        while(1){}
+
+    }
+
     unsigned long now = micros();
 
     if (last_time == 0) { 

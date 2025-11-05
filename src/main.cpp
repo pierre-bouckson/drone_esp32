@@ -6,6 +6,8 @@
 #include "imu.h"
 #include "motor_controller.h"
 #include <Wire.h>     //For I2C
+#include "esp_task_wdt.h"
+
 WiFiUDP UDP;
 
 int LED_BUILTIN = 2;
@@ -40,6 +42,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Console ready !");
 
+  esp_task_wdt_init(30, true);
+  esp_task_wdt_add(NULL);
+
 
   Wire.begin();
 
@@ -57,7 +62,7 @@ void setup() {
 void loop() {
 
   ArduinoOTA.handle(); // OTA
-
+  esp_task_wdt_reset();   // Rassure le timer watchdog
 
   const char* msg = drone.read_msg();
   if(strcmp(msg, "command") == 0){

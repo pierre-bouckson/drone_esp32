@@ -88,7 +88,7 @@ data_imu imu_sensor::get_orientation() {
   // orientation.yaw_deg = yaw;
 
   if(abs(roll*(180/PI)) > 30 || abs(pitch*(180/PI)) > 50){
-    emergency = 0;
+    emergency = 1;
   }
 
   orientation.roll_deg = roll;
