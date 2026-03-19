@@ -1,5 +1,12 @@
 #include "imu.h"
 
+Adafruit_LSM6DSOX sox;
+KalmanFilter kalmanRoll;
+KalmanFilter kalmanPitch;
+float roll = 0.0f;
+float pitch = 0.0f;
+unsigned long lastMicros = 0;
+
 bool emergency = 0;
 
 const uint8_t MPU6500_ADDR = 0x68;
@@ -10,83 +17,57 @@ data_imu orientation = {0.0f, 0.0f, 0.0f};
 
 bool imu_sensor::IMU_init() {
     
-  if(!myMPU6500.init()){
-    Serial.println("MPU6500 does not respond");
-    return false;
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  Serial.println("Initialisation LSM6DSOX...");
+
+  // Adresse I2C par défaut : 0x6A
+  // Si ça échoue essaie 0x6B (broche SA0/SDO reliée à 3.3V)
+  if (!sox.begin_I2C(0x6A, &Wire)) {
+    Serial.println("ERREUR : capteur LSM6DSOX introuvable !");
+    Serial.println("Vérifie le câblage SDA/SCL et l'alimentation 3.3V.");
+    while (1) delay(100);
   }
-  else{
-    Serial.println("MPU6500 is connected");
-  }
-  myMPU6500.autoOffsets();
-  myMPU6500.enableGyrDLPF();
-  myMPU6500.setGyrDLPF(MPU6500_DLPF_6);
-  myMPU6500.setSampleRateDivider(5);
-  myMPU6500.setGyrRange(MPU6500_GYRO_RANGE_250);
-  myMPU6500.setAccRange(MPU6500_ACC_RANGE_2G);
-  myMPU6500.enableAccDLPF(true);
-  myMPU6500.setAccDLPF(MPU6500_DLPF_6);
-  return true; 
+
+  Serial.println("LSM6DSOX détecté !");
+
+  // Plages de mesure
+  sox.setAccelRange(LSM6DS_ACCEL_RANGE_4_G);    // ±4g
+  sox.setGyroRange(LSM6DS_GYRO_RANGE_500_DPS);  // ±500 °/s
+  sox.setAccelDataRate(LSM6DS_RATE_104_HZ);
+  sox.setGyroDataRate(LSM6DS_RATE_104_HZ);
+
+  lastMicros = micros();
+  delay(1000); // laisse le capteur stabiliser
+  return true;
 }
 
 
 data_imu imu_sensor::get_orientation() {
-  xyzFloat gValue = myMPU6500.getGValues();
-  xyzFloat gyr = myMPU6500.getGyrValues();
+  sensors_event_t accel, gyro, temp;
+  sox.getEvent(&accel, &gyro, &temp);
 
-  float temp = myMPU6500.getTemperature();
-  float resultantG = myMPU6500.getResultantG(gValue);
+  // Accéléromètre en m/s²  →  on divise par g pour avoir des unités normalisées
+  float ax = accel.acceleration.x / 9.81f;
+  float ay = accel.acceleration.y / 9.81f;
+  float az = accel.acceleration.z / 9.81f;
 
+  // Gyroscope en rad/s  →  conversion en deg/s
+  float gx = gyro.gyro.x * 180.0f / PI;
+  float gy = gyro.gyro.y * 180.0f / PI;
 
-  float roll_acc  = atan2( gValue.y, gValue.z );   // En Radian
-  float pitch_acc = atan2( -gValue.x, sqrt(gValue.y * gValue.y + gValue.z * gValue.z) );
+  // dt
+  unsigned long now = micros();
+  float dt = (now - lastMicros) / 1000000.0f;
+  lastMicros = now;
 
-  // if(first==1) {
-  //   float roll = roll_acc;
-  //   float pitch = pitch_acc;
-  //   float yaw = 0;
-  //   first = 0;
-  // }
+  // Angles bruts accéléromètre
+  float rollAcc  = atan2(ay, az)                   * 180.0f / PI;
+  float pitchAcc = atan2(-ax, sqrt(ay*ay + az*az)) * 180.0f / PI;
 
-  uint32_t now = micros();
-  float dt = (now - last_mes) / 1e6f;
-  last_mes = now;
-
-  p = gyr.x * (PI/180.0);  // en radian par seconde
-  q = gyr.y * (PI/180.0);
-  r = gyr.z * (PI/180.0);
-
-  roll_dot = p + q*sin(roll)*tan(pitch) + r*cos(roll)*tan(pitch);
-  pitch_dot = q*cos(roll) - r*sin(roll);
-
-  roll_gyro  = roll + roll_dot * dt;
-  pitch_gyro = pitch + pitch_dot * dt;
-  yaw_gyro   = r * dt;
-
-
-  float a = (float)gain / 10000.0f;
-
-  float alpha = 0.97;
-
-
-  // Complementary Filter   (Upgrade possible with Kalman filter)
-
-  roll = alpha * (roll_gyro) + (1.0f-alpha) * roll_acc;    //Fusion de capteur
-
-  pitch = alpha * (pitch_gyro) + (1.0f-alpha) * pitch_acc;
-
-  my_connect.answer_values(roll, motor1, motor2, roll_acc, 8895);     //Print via UDP
-
-
-
-  // roll  = alpha * roll_pred  + (1-alpha) * (roll_acc * (180.0 / PI));
-  // pitch = alpha * pitch_pred + (1-alpha) * (pitch_acc * (180.0 / PI));
-  // yaw   = yaw_pred;    // (pas de correction sans mag)
-
-
-  // orientation.roll_deg = roll;
-  // orientation.pitch_deg = pitch;
-  // orientation.yaw_deg = yaw;
-
+  // Filtre de Kalman
+  roll  = kalmanRoll .update(rollAcc,  gx, dt);
+  pitch = kalmanPitch.update(pitchAcc, gy, dt);
   if(abs(roll*(180/PI)) > 30 || abs(pitch*(180/PI)) > 50){
     emergency = 1;
   }
@@ -97,18 +78,4 @@ data_imu imu_sensor::get_orientation() {
 
 
   return orientation;
-}
-
-
-
-
-data_imu imu_sensor::get_gyro(){
-
-  xyzFloat gyr = myMPU6500.getGyrValues();
-
-  gyro_fast.roll_deg = gyr.x;
-  gyro_fast.pitch_deg = gyr.y;
-
-  return gyro_fast;
-
 }

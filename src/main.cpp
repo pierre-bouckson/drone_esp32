@@ -48,7 +48,7 @@ void setup() {
 
   Wire.begin();
 
-  drone.init_wifi(ssid, password, localPort, otaPassword);     //Init Wifi 
+  drone.init_wifi(ssid, password, localPort);
 
 
   if(my_imu.IMU_init()) Serial.println("IMU init");
@@ -61,8 +61,7 @@ void setup() {
 // the loop function runs over and over again forever
 void loop() {
 
-  ArduinoOTA.handle(); // OTA
-  esp_task_wdt_reset();   // Rassure le timer watchdog
+  esp_task_wdt_reset();
 
   const char* msg = drone.read_msg();
   if(strcmp(msg, "command") == 0){

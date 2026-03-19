@@ -70,7 +70,6 @@ private:
 public:
     void motor_init();
     motor_cmd cmd_vel();
-    motor_cmd stability();
     void send_cmd();
 
 

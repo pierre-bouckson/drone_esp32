@@ -36,13 +36,6 @@ motor_cmd motor_controller::cmd_vel() {
     return commande_rc_;
 }
 
-motor_cmd motor_controller::stability() {
-
-    data_imu gyro = imu_.get_gyro();
-    commande_stability_ = pid_.trad_motor(gyro);
-
-    return commande_stability_;
-}
 
 void motor_controller::send_cmd() {
 
