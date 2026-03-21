@@ -44,7 +44,7 @@ void motor_controller::send_cmd() {
 
     if(emergency){
         digitalWrite(2, LOW);
-        while(1){}
+        //while(1){}
 
     }
 
@@ -53,7 +53,7 @@ void motor_controller::send_cmd() {
     if (last_time == 0) { 
         last_time = now; 
         return;              // on attend le prochain tour pour avoir un vrai dt
-    }
+    } 
 
     
     float dt = (now - last_time) / 1000000.0f;

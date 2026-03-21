@@ -9,15 +9,12 @@ unsigned long lastMicros = 0;
 
 bool emergency = 0;
 
-const uint8_t MPU6500_ADDR = 0x68;
-MPU6500_WE myMPU6500(MPU6500_ADDR);
-
 data_imu orientation = {0.0f, 0.0f, 0.0f};
 
 
 bool imu_sensor::IMU_init() {
     
-  Wire.begin(I2C_SDA, I2C_SCL);
+  Wire.begin(I2C_SDA, I2C_SCL, 400000);
 
   Serial.println("Initialisation LSM6DSOX...");
 
@@ -34,8 +31,8 @@ bool imu_sensor::IMU_init() {
   // Plages de mesure
   sox.setAccelRange(LSM6DS_ACCEL_RANGE_4_G);    // ±4g
   sox.setGyroRange(LSM6DS_GYRO_RANGE_500_DPS);  // ±500 °/s
-  sox.setAccelDataRate(LSM6DS_RATE_104_HZ);
-  sox.setGyroDataRate(LSM6DS_RATE_104_HZ);
+  sox.setAccelDataRate(LSM6DS_RATE_833_HZ);
+  sox.setGyroDataRate(LSM6DS_RATE_833_HZ);
 
   lastMicros = micros();
   delay(1000); // laisse le capteur stabiliser
@@ -68,7 +65,7 @@ data_imu imu_sensor::get_orientation() {
   // Filtre de Kalman
   roll  = kalmanRoll .update(rollAcc,  gx, dt);
   pitch = kalmanPitch.update(pitchAcc, gy, dt);
-  if(abs(roll*(180/PI)) > 30 || abs(pitch*(180/PI)) > 50){
+  if(abs(roll) > 50 || abs(pitch) > 50){
     emergency = 1;
   }
 

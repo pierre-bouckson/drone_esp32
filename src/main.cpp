@@ -6,7 +6,6 @@
 #include "imu.h"
 #include "motor_controller.h"
 #include <Wire.h>     //For I2C
-#include "esp_task_wdt.h"
 
 WiFiUDP UDP;
 
@@ -20,6 +19,9 @@ int PIN_MOTOR4 = 7;
 int PIN_SDA = 21;
 int PIN_SLC = 22;
 float last_mes = 0;
+
+uint32_t count = 0;
+unsigned long last_update = 0;
 
 int gain;
 
@@ -41,12 +43,11 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.begin(115200);
   Serial.println("Console ready !");
+  Serial.print("CPU freq: ");
+  Serial.print(getCpuFrequencyMhz());
+  Serial.println(" MHz");
 
-  esp_task_wdt_init(30, true);
-  esp_task_wdt_add(NULL);
-
-
-  Wire.begin();
+  Wire.begin(PIN_SDA, PIN_SLC, 400000);
 
   drone.init_wifi(ssid, password, localPort);
 
@@ -60,8 +61,6 @@ void setup() {
 
 // the loop function runs over and over again forever
 void loop() {
-
-  esp_task_wdt_reset();
 
   const char* msg = drone.read_msg();
   if(strcmp(msg, "command") == 0){
@@ -124,6 +123,14 @@ void loop() {
 
   my_motors.send_cmd();
   
+  count++;
+  if(micros() - last_update >= 1000000)
+  {
+    Serial.print("Loop/s: ");
+    Serial.println(count);
+    count = 0;
+    last_update = micros();
+  }
  
 }
 
