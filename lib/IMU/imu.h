@@ -80,6 +80,8 @@ extern float last_mes;
 
 
 
+void imu_task(void* param);
+
 class imu_sensor {
 
 private:

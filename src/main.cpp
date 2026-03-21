@@ -53,6 +53,7 @@ void setup() {
 
 
   if(my_imu.IMU_init()) Serial.println("IMU init");
+  xTaskCreatePinnedToCore(imu_task, "IMU", 4096, NULL, 1, NULL, 0);
 
   my_motors.motor_init();
 

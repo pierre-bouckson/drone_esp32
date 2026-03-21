@@ -40,29 +40,23 @@ bool imu_sensor::IMU_init() {
 }
 
 
-data_imu imu_sensor::get_orientation() {
+static void imu_read_update() {
   sensors_event_t accel, gyro, temp;
   sox.getEvent(&accel, &gyro, &temp);
 
-  // Accéléromètre en m/s²  →  on divise par g pour avoir des unités normalisées
   float ax = accel.acceleration.x / 9.81f;
   float ay = accel.acceleration.y / 9.81f;
   float az = accel.acceleration.z / 9.81f;
-
-  // Gyroscope en rad/s  →  conversion en deg/s
   float gx = gyro.gyro.x * 180.0f / PI;
   float gy = gyro.gyro.y * 180.0f / PI;
 
-  // dt
   unsigned long now = micros();
   float dt = (now - lastMicros) / 1000000.0f;
   lastMicros = now;
 
-  // Angles bruts accéléromètre
   float rollAcc  = atan2(ay, az)                   * 180.0f / PI;
   float pitchAcc = atan2(-ax, sqrt(ay*ay + az*az)) * 180.0f / PI;
 
-  // Filtre de Kalman
   roll  = kalmanRoll .update(rollAcc,  gx, dt);
   pitch = kalmanPitch.update(pitchAcc, gy, dt);
   if(abs(roll) > 50 || abs(pitch) > 50){
@@ -71,8 +65,14 @@ data_imu imu_sensor::get_orientation() {
 
   orientation.roll_deg = roll;
   orientation.pitch_deg = pitch;
+}
 
+void imu_task(void* param) {
+  for(;;) {
+    imu_read_update();
+  }
+}
 
-
+data_imu imu_sensor::get_orientation() {
   return orientation;
 }
