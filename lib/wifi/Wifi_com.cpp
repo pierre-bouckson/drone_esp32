@@ -24,6 +24,7 @@ const char* drone_connect::read_msg() {
         Serial.print(" of : ");
         Serial.println(packetSize);
 
+        client_port = UDP.remotePort();
         int len = UDP.read(packetBuffer, 255);          // Met le msg UDP dans le buffer
         if(len > 0) packetBuffer[len] = 0;    // Mettre au format le tableau pour printf
         Serial.printf("Data : %s\n\r", packetBuffer);
@@ -34,9 +35,9 @@ const char* drone_connect::read_msg() {
     }
 }
 
-bool drone_connect::answer(const char* msg, uint16_t port) {
-    if (UDP.beginPacket(ip_client, port) != 1) return false;
-    UDP.print(msg);                                // Repond OK
+bool drone_connect::answer(const char* msg) {
+    if (UDP.beginPacket(ip_client, client_port) != 1) return false;
+    UDP.print(msg);
     UDP.endPacket();
     return true;
 }

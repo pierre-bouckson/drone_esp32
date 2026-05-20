@@ -40,7 +40,7 @@ void setup() {
 
   delay(1000); 
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_BUILTIN, LOW);
   Serial.begin(115200);
   Serial.println("Console ready !");
   Serial.print("CPU freq: ");
@@ -66,7 +66,7 @@ void loop() {
   const char* msg = drone.read_msg();
   if(strcmp(msg, "command") == 0){
       digitalWrite(LED_BUILTIN, HIGH);
-      if(drone.answer("ok", 8894) == true){
+      if(drone.answer("ok") == true){
         Serial.println("answer send");
       } else {
         Serial.println("Error send answer");
@@ -123,15 +123,6 @@ void loop() {
 
 
   my_motors.send_cmd();
-  
-  count++;
-  if(micros() - last_update >= 1000000)
-  {
-    Serial.print("Loop/s: ");
-    Serial.println(count);
-    count = 0;
-    last_update = micros();
-  }
  
 }
 

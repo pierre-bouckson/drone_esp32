@@ -17,6 +17,7 @@ class drone_connect {
 private:
     IPAddress ip_esp;
     IPAddress ip_client;
+    uint16_t  client_port;
     char packetBuffer[255];
     bool state_drone;
     WiFiUDP UDP;
@@ -24,7 +25,7 @@ private:
 public:
     void init_wifi(const char* ssid, const char* pass, uint16_t port);
     const char* read_msg();
-    bool answer(const char* msg, uint16_t port); 
+    bool answer(const char* msg);
     bool answer_values(float v1, float v2, float v3, float v4, uint16_t port);
 
     

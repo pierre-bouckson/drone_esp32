@@ -5,119 +5,95 @@
 int motor1 = 0;
 int motor2 = 0;
 
-void motor_controller::motor_init() {
+// ─── Helpers RC PWM ───────────────────────────────────────────────────────────
 
-    ledcSetup(ledChannel, freq, resolution);
-    ledcSetup(ledChanne2, freq, resolution);
-    ledcSetup(ledChanne3, freq, resolution);
-    ledcSetup(ledChanne4, freq, resolution);
-
-    ledcAttachPin(PIN_motor_1, ledChannel);
-    ledcAttachPin(PIN_motor_2, ledChanne2);
-    ledcAttachPin(PIN_motor_3, ledChanne3);
-    ledcAttachPin(PIN_motor_4, ledChanne4);
-
-    ledcWrite(ledChannel, 0);
-    ledcWrite(ledChanne2, 0);
-    ledcWrite(ledChanne3, 0);
-    ledcWrite(ledChanne4, 0);
+uint32_t motor_controller::usToDuty(int pulseUs) {
+    return (uint32_t)pulseUs * ((1UL << LEDC_RES_BITS) - 1) / PERIOD_US;
 }
 
+void motor_controller::writeMotor(int channel, int pulseUs) {
+    pulseUs = constrain(pulseUs, PULSE_MIN_US, PULSE_MAX_US);
+    ledcWrite(channel, usToDuty(pulseUs));
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+void motor_controller::motor_init() {
+    ledcSetup(CH_motor_1, LEDC_FREQ_HZ, LEDC_RES_BITS);
+    ledcAttachPin(PIN_motor_1, CH_motor_1);
+    ledcSetup(CH_motor_2, LEDC_FREQ_HZ, LEDC_RES_BITS);
+    ledcAttachPin(PIN_motor_2, CH_motor_2);
+    ledcSetup(CH_motor_3, LEDC_FREQ_HZ, LEDC_RES_BITS);
+    ledcAttachPin(PIN_motor_3, CH_motor_3);
+    ledcSetup(CH_motor_4, LEDC_FREQ_HZ, LEDC_RES_BITS);
+    ledcAttachPin(PIN_motor_4, CH_motor_4);
+
+    // Signal à 1000 µs obligatoire avant d'alimenter les ESCs
+    writeMotor(CH_motor_1, PULSE_MIN_US);
+    writeMotor(CH_motor_2, PULSE_MIN_US);
+    writeMotor(CH_motor_3, PULSE_MIN_US);
+    writeMotor(CH_motor_4, PULSE_MIN_US);
+
+    Serial.println("[ESC] Signal a 1000 us. Alimentez les ESCs maintenant.");
+    Serial.println("[ESC] Armement dans 3 s...");
+    delay(3000);
+    Serial.println("[ESC] Moteurs armes. Prets.");
+}
+
+// ─── Mixing RC simple (sans PID) ─────────────────────────────────────────────
 
 motor_cmd motor_controller::cmd_vel() {
-
-    commande_rc_.motor_1_duty = msg_rc_.up * 2.5 - msg_rc_.forward * 0.5 - msg_rc_.left * 0.5;
-    commande_rc_.motor_2_duty = msg_rc_.up * 2.5 + msg_rc_.forward * 0.5 - msg_rc_.left * 0.5;
-    commande_rc_.motor_3_duty = msg_rc_.up * 2.5 + msg_rc_.forward * 0.5 + msg_rc_.left * 0.5;
-    commande_rc_.motor_4_duty = msg_rc_.up * 2.5 - msg_rc_.forward * 0.5 + msg_rc_.left * 0.5;
-
-
-
+    // up 0-100 → base 1000-2000 µs ; forward/left ±100 → ±200 µs
+    int base = PULSE_MIN_US + msg_rc_.up * 10;
+    commande_rc_.motor_1_duty = base - msg_rc_.forward * 2 - msg_rc_.left * 2;
+    commande_rc_.motor_2_duty = base + msg_rc_.forward * 2 - msg_rc_.left * 2;
+    commande_rc_.motor_3_duty = base + msg_rc_.forward * 2 + msg_rc_.left * 2;
+    commande_rc_.motor_4_duty = base - msg_rc_.forward * 2 + msg_rc_.left * 2;
     return commande_rc_;
 }
 
+// ─── Boucle de contrôle (PID stabilisation) ───────────────────────────────────
 
 void motor_controller::send_cmd() {
 
-
     data_imu orientation = imu_.get_orientation();
 
-    if(emergency){
+    if (emergency) {
         digitalWrite(2, LOW);
-        //while(1){}
-
     }
 
     unsigned long now = micros();
-
-    if (last_time == 0) { 
-        last_time = now; 
-        return;              // on attend le prochain tour pour avoir un vrai dt
-    } 
-
-    
-    float dt = (now - last_time) / 1000000.0f;
-    last_time = now;
-    if (dt <= 0 || dt > 0.05f) {   // 50 ms
-        return; // skip ce tour
+    if (last_time == 0) {
+        last_time = now;
+        return;
     }
 
-    erreur_pitch = msg_rc_.left/20 - (orientation.pitch_deg * (180/PI));
-    erreur_roll = -msg_rc_.forward/20 - (orientation.roll_deg * (180/PI));
+    float dt = (now - last_time) / 1000000.0f;
+    last_time = now;
+    if (dt <= 0 || dt > 0.05f) return;
 
+    erreur_pitch = msg_rc_.left    / 20.0f - (orientation.pitch_deg * (180.0f / PI));
+    erreur_roll  = -msg_rc_.forward / 20.0f - (orientation.roll_deg  * (180.0f / PI));
 
-
-    erreur_rate.roll_deg = pid_.pid_rate_roll(erreur_roll, coef_udp, dt);
+    erreur_rate.roll_deg  = pid_.pid_rate_roll (erreur_roll,  coef_udp, dt);
     erreur_rate.pitch_deg = pid_.pid_rate_pitch(erreur_pitch, coef_udp, dt);
-
-
 
     cmd_motor_rate = pid_.trad_motor(erreur_rate);
 
+    // Base throttle : up 0-100 → 1000-2000 µs
+    int base_us = PULSE_MIN_US + msg_rc_.up * 10;
 
-
-    trottle = msg_rc_.up;
-
-    commande_final.motor_1_duty = trottle * 2.5 + cmd_motor_rate.motor_1_duty;
-    commande_final.motor_2_duty = trottle * 2.5 + cmd_motor_rate.motor_2_duty;
-    commande_final.motor_3_duty = trottle * 2.5 + cmd_motor_rate.motor_3_duty;
-    commande_final.motor_4_duty = trottle * 2.5 + cmd_motor_rate.motor_4_duty;
-
-    
-
-    if(commande_final.motor_1_duty > 255) commande_final.motor_1_duty = 255;
-    if(commande_final.motor_2_duty > 255) commande_final.motor_2_duty = 255;
-    if(commande_final.motor_3_duty > 255) commande_final.motor_3_duty = 255;
-    if(commande_final.motor_4_duty > 255) commande_final.motor_4_duty = 255;
-
-    if(commande_final.motor_1_duty < 0) commande_final.motor_1_duty = 0;
-    if(commande_final.motor_2_duty < 0) commande_final.motor_2_duty = 0;
-    if(commande_final.motor_3_duty < 0) commande_final.motor_3_duty = 0;
-    if(commande_final.motor_4_duty < 0) commande_final.motor_4_duty = 0;
+    // Les corrections PID sont en µs (même échelle que le range 1000-2000)
+    commande_final.motor_1_duty = base_us + cmd_motor_rate.motor_1_duty;
+    commande_final.motor_2_duty = base_us + cmd_motor_rate.motor_2_duty;
+    commande_final.motor_3_duty = base_us + cmd_motor_rate.motor_3_duty;
+    commande_final.motor_4_duty = base_us + cmd_motor_rate.motor_4_duty;
 
     motor1 = commande_final.motor_1_duty;
     motor2 = commande_final.motor_2_duty;
 
-    // my_connect.answer_values(commande_final.motor_1_duty, commande_final.motor_2_duty, commande_final.motor_3_duty, commande_final.motor_4_duty, 8895);
-
-    ledcWrite(ledChannel, commande_final.motor_1_duty);
-    ledcWrite(ledChanne2, commande_final.motor_2_duty);
-    ledcWrite(ledChanne3, commande_final.motor_3_duty);
-    ledcWrite(ledChanne4, commande_final.motor_4_duty);
-
-    
-
+    writeMotor(CH_motor_1, commande_final.motor_1_duty);
+    writeMotor(CH_motor_2, commande_final.motor_2_duty);
+    writeMotor(CH_motor_3, commande_final.motor_3_duty);
+    writeMotor(CH_motor_4, commande_final.motor_4_duty);
 }
-
-
-    // erreur_pitch = msg_rc_.forward/10 - orientation.pitch_deg;
-    // erreur_roll = msg_rc_.left/10 - orientation.roll_deg;
-
-    // rate_sp_pitch = pid_.pi_attitude_pitch(erreur_pitch, 5, 0.2, dt);
-    // rate_sp_roll  = pid_.pi_attitude_roll(erreur_roll, 5, 0.2, dt);
-
-    // erreur_rate_pitch = rate_sp_pitch - gyro.pitch_deg;
-    // erreur_rate_roll = rate_sp_roll - gyro.roll_deg;
-
-    // erreur_rate.pitch_deg = pid_.pid_rate_pitch(erreur_rate_pitch, 0.02, 0.04, 0.001,dt);
-    // erreur_rate.roll_deg = pid_.pid_rate_roll(erreur_rate_roll, 0.02, 0.04, 0.001,dt);
