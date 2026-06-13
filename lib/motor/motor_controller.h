@@ -1,77 +1,43 @@
 #pragma once
 #include <Arduino.h>
-#include <WiFi.h>
-#include <WiFiUdp.h>
+#include "drone_types.h"
 
-#include "imu.h"
-#include "Wifi_com.h"
-#include "motor_types.h"
-#include "pid.h"
-
-
-extern coef_pid coef_udp;
-
-extern msg_rc msg_rc_;
-
-extern int motor1; 
-
-
+// ============================================================================
+//  motor_controller : couche matérielle des moteurs.
+//  Configure les 4 sorties PWM (LEDC) et applique une consigne de rapport
+//  cyclique. Ne fait aucun calcul de vol : il sature simplement la commande
+//  dans la plage valide avant de l'écrire.
+// ============================================================================
 class motor_controller {
 
 private:
-    int PIN_motor_1 = 23;
-    int PIN_motor_2 = 15;
-    int PIN_motor_3 = 13;
-    int PIN_motor_4 = 33;
-    const int freq = 32000;
-    const int resolution = 8;
+    // Broches de commande des 4 ESC / moteurs.
+    static constexpr int PIN_motor_1 = 23;
+    static constexpr int PIN_motor_2 = 15;
+    static constexpr int PIN_motor_3 = 13;
+    static constexpr int PIN_motor_4 = 33;
 
-    // Init 4 channel for 4 different duty cycle 
-    const int ledChannel = 0;
-    const int ledChanne2 = 1;
-    const int ledChanne3 = 2;
-    const int ledChanne4 = 3;
+    static constexpr int freq       = 32000;  // fréquence PWM (Hz)
+    static constexpr int resolution = 8;       // résolution PWM (bits) → 0..255
 
-    int duty1 = 0;
-    int duty2 = 0;
-    int duty3 = 0;
-    int duty4 = 0;
+    // Un canal LEDC par moteur.
+    static constexpr int ledChannel = 0;
+    static constexpr int ledChanne2 = 1;
+    static constexpr int ledChanne3 = 2;
+    static constexpr int ledChanne4 = 3;
 
-    int trottle = 0;
-    unsigned long last_time = 0;
+    static constexpr int DUTY_MIN = 0;
+    static constexpr int DUTY_MAX = 255;
 
-    float erreur_pitch = 0;
-    float erreur_roll = 0;
-
-    float rate_sp_pitch = 0;
-    float rate_sp_roll = 0;
-
-    float erreur_rate_pitch = 0;
-    float erreur_rate_roll = 0;
-
-    coef_pid coef = {1.41, 0.011,0.133};  //elice tello 
-
-
-
-    imu_sensor imu_;                // ton objet IMU
-    pid pid_;    // ton contrôleur PID
-    motor_cmd commande_stability_;
-    motor_cmd commande_rc_;
-    motor_cmd commande_final;
-
-    motor_cmd cmd_motor_rate;
-    data_imu erreur_rate;
-
-    drone_connect my_connect;
-
-
-
+    static int clamp(int duty);
 
 public:
+    // Configure les canaux PWM et met tous les moteurs à l'arrêt.
     void motor_init();
-    motor_cmd cmd_vel();
-    void send_cmd();
 
+    // Applique une consigne aux 4 moteurs (valeurs saturées dans 0..255).
+    void write(const motor_cmd& cmd);
 
-    
+    // Coupe immédiatement les 4 moteurs.
+    void stop();
 };

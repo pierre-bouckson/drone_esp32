@@ -1,137 +1,67 @@
 #include <Arduino.h>
-#include "AppConfig.h"
-#include <WiFi.h>
-#include <WiFiUdp.h>
-#include "Wifi_com.h"
-#include "imu.h"
-#include "motor_controller.h"
-#include <Wire.h>     //For I2C
+#include <Wire.h>
 #include "esp_task_wdt.h"
 
-WiFiUDP UDP;
+#include "AppConfig.h"
+#include "Wifi_com.h"
+#include "command_parser.h"
+#include "imu.h"
+#include "flight_controller.h"
+#include "motor_controller.h"
 
-int LED_BUILTIN = 2;
+// ---- Matériel ----
+static constexpr int LED_BUILTIN_PIN = 2;
+static constexpr int WATCHDOG_TIMEOUT_S = 30;
 
-int PIN_MOTOR1 = 4;
-int PIN_MOTOR2 = 5;
-int PIN_MOTOR3 = 6;
-int PIN_MOTOR4 = 7;
+// ---- Modules du firmware (une responsabilité chacun) ----
+drone_connect    radio;     // transport WiFi / UDP
+CommandParser    parser;    // décodage du protocole
+imu_sensor       imu;       // capteur d'orientation
+FlightController flight;    // boucle de stabilisation
+motor_controller motors;    // sorties PWM moteurs
 
-int PIN_SDA = 21;
-int PIN_SLC = 22;
-float last_mes = 0;
-
-int gain;
-
-
-coef_pid coef_udp;
-
-drone_connect drone;
-imu_sensor my_imu;
-motor_controller my_motors;
-
-msg_rc msg_rc_;
-
-
-// the setup function runs once when you press reset or power the board
 void setup() {
+    delay(1000);
+    pinMode(LED_BUILTIN_PIN, OUTPUT);
+    digitalWrite(LED_BUILTIN_PIN, HIGH);
 
-  delay(1000); 
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-  Serial.begin(115200);
-  Serial.println("Console ready !");
+    Serial.begin(115200);
+    Serial.println("Console ready !");
 
-  esp_task_wdt_init(30, true);
-  esp_task_wdt_add(NULL);
+    // Chien de garde : redémarre la carte si la boucle se bloque.
+    esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true);
+    esp_task_wdt_add(NULL);
 
+    Wire.begin();
+    radio.init_wifi(ssid, password, localPort);
 
-  Wire.begin();
-
-  drone.init_wifi(ssid, password, localPort);
-
-
-  if(my_imu.IMU_init()) Serial.println("IMU init");
-
-  my_motors.motor_init();
-
-
+    if (imu.IMU_init()) Serial.println("IMU init");
+    motors.motor_init();
 }
 
-// the loop function runs over and over again forever
 void loop() {
+    esp_task_wdt_reset();
 
-  esp_task_wdt_reset();
-
-  const char* msg = drone.read_msg();
-  if(strcmp(msg, "command") == 0){
-      digitalWrite(LED_BUILTIN, HIGH);
-      if(drone.answer("ok", 8894) == true){
-        Serial.println("answer send");
-      } else {
-        Serial.println("Error send answer");
-      }
-  }
-  
-  int left, forward, up, yaw;
-  if (strncmp(msg, "rc", 2) == 0) {
-    Serial.println("msg rc detecter");
-    if(sscanf(msg, "rc %d %d %d %d", &left, &forward, &up, &yaw) == 4){
-      msg_rc_.left = left;
-      msg_rc_.forward = forward;
-      msg_rc_.up = up;
-      msg_rc_.yaw = yaw;
-      Serial.print("CMD RECU : ");
-      Serial.println(msg_rc_.up);
+    // 1. Réception et décodage d'un éventuel message.
+    const char* msg = radio.read_msg();
+    if (parser.parse(msg) == CommandParser::Kind::Ping) {
+        digitalWrite(LED_BUILTIN_PIN, HIGH);
+        Serial.println(radio.answer("ok", hostPort) ? "answer send" : "Error send answer");
     }
-  }
 
+    // 2. Lecture de l'orientation.
+    data_imu orientation = imu.get_orientation();
 
-
-  if (strncmp(msg, "gain", 4) == 0) {
-    Serial.println("msg gain detecter");
-    if(sscanf(msg, "gain %d", &gain) == 1){
-      Serial.print("GAIN RECU : ");
-      Serial.println(gain);
+    // 3. Sécurité : inclinaison excessive → arrêt définitif des moteurs.
+    if (imu.inEmergency()) {
+        motors.stop();
+        digitalWrite(LED_BUILTIN_PIN, LOW);
+        while (1) {}
     }
-  }
 
-
-  if (strncmp(msg, "pid", 3) == 0) {
-    Serial.println("msg pid detecter");
-    if(sscanf(msg, "pid %f %f %f", &coef_udp.kp, &coef_udp.ki, &coef_udp.kd) == 3){
-      Serial.print("PID RECU : ");
-      Serial.println(coef_udp.kp);
+    // 4. Stabilisation : calcul de la consigne et envoi aux moteurs.
+    motor_cmd cmd;
+    if (flight.update(parser.rc(), orientation, parser.pid(), cmd)) {
+        motors.write(cmd);
     }
-  }
-
-
-  // data_imu to_print =  my_imu.get_gyro();
-  // Serial.print("x : ");
-  // Serial.print(to_print.roll_deg);
-  // Serial.print("    y : ");
-  // Serial.print(to_print.pitch_deg);
-  
-
-  
-
-  // data_imu to_print =  my_imu.get_orientation();
-  // Serial.print("x : ");
-  // Serial.print(to_print.roll_deg);
-  // Serial.print("    y : ");
-  // Serial.print(to_print.pitch_deg);
-
-
-  my_motors.send_cmd();
-  
- 
 }
-
- /*
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);   
-  // wait for a second
-  //Serial.println("Nice");
-  */
