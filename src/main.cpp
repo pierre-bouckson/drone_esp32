@@ -106,11 +106,10 @@ void loop() {
   }
 
 
-  // data_imu to_print =  my_imu.get_gyro();
-  // Serial.print("x : ");
-  // Serial.print(to_print.roll_deg);
-  // Serial.print("    y : ");
-  // Serial.print(to_print.pitch_deg);
+  Serial.print("roll : ");
+  Serial.print(orientation.roll_deg);
+  Serial.print("pitch : ");
+  Serial.print(orientation.pitch_deg);
   
 
   
