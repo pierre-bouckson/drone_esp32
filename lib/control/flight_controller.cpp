@@ -3,10 +3,10 @@
 motor_cmd FlightController::mix(float roll_corr, float pitch_corr) {
     // Disposition en X : chaque moteur reçoit une combinaison des corrections.
     motor_cmd cmd;
-    cmd.motor_1_duty = -pitch_corr + roll_corr;
-    cmd.motor_2_duty = -pitch_corr - roll_corr;
-    cmd.motor_3_duty =  pitch_corr - roll_corr;
-    cmd.motor_4_duty =  pitch_corr + roll_corr;
+    cmd.motor_1_duty = -pitch_corr - roll_corr;
+    cmd.motor_2_duty =  pitch_corr - roll_corr;
+    cmd.motor_3_duty =  pitch_corr + roll_corr;
+    cmd.motor_4_duty = -pitch_corr + roll_corr;
     return cmd;
 }
 

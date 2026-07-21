@@ -11,7 +11,10 @@ void motor_controller::motor_init() {
     ledcAttachPin(PIN_motor_3, ledChanne3);
     ledcAttachPin(PIN_motor_4, ledChanne4);
 
+    // Les ESC refusent d'armer tant qu'ils n'ont pas vu le mini gaz : on le
+    // maintient quelques secondes avant de rendre la main à la boucle de vol.
     stop();
+    delay(ARM_DELAY_MS);
 }
 
 int motor_controller::clamp(int duty) {
@@ -20,16 +23,22 @@ int motor_controller::clamp(int duty) {
     return duty;
 }
 
+int motor_controller::to_ticks(int duty) {
+    duty = clamp(duty);
+    return TICKS_MIN + (duty * (TICKS_MAX - TICKS_MIN)) / DUTY_MAX;
+}
+
 void motor_controller::write(const motor_cmd& cmd) {
-    ledcWrite(ledChannel, clamp(cmd.motor_1_duty));
-    ledcWrite(ledChanne2, clamp(cmd.motor_2_duty));
-    ledcWrite(ledChanne3, clamp(cmd.motor_3_duty));
-    ledcWrite(ledChanne4, clamp(cmd.motor_4_duty));
+    ledcWrite(ledChannel, to_ticks(cmd.motor_1_duty));
+    ledcWrite(ledChanne2, to_ticks(cmd.motor_2_duty));
+    ledcWrite(ledChanne3, to_ticks(cmd.motor_3_duty));
+    ledcWrite(ledChanne4, to_ticks(cmd.motor_4_duty));
 }
 
 void motor_controller::stop() {
-    ledcWrite(ledChannel, 0);
-    ledcWrite(ledChanne2, 0);
-    ledcWrite(ledChanne3, 0);
-    ledcWrite(ledChanne4, 0);
+    // Mini gaz et non 0 : couper le signal remettrait les ESC en alarme.
+    ledcWrite(ledChannel, TICKS_MIN);
+    ledcWrite(ledChanne2, TICKS_MIN);
+    ledcWrite(ledChanne3, TICKS_MIN);
+    ledcWrite(ledChanne4, TICKS_MIN);
 }

@@ -5,7 +5,7 @@ Pilotage du drone a la manette PS4 (USB) + reglage PID en direct.
 Regroupe tout ce qu'il faut pour un essai en vol :
   - lecture de la manette et envoi des commandes RC a 50 Hz (port 8889)
   - sliders Kp / Ki / Kd envoyes au firmware sans recompiler
-  - orientation temps reel (horizon artificiel + courbes)
+  - orientation temps reel (courbes d'angles)
   - correction PID appliquee a chaque moteur, en barres et en courbes
 
 Se connecter au point d'acces WiFi de l'ESP32, brancher la manette, puis :
@@ -20,13 +20,12 @@ Perdre la manette en cours de vol desarme automatiquement.
 """
 import sys
 import socket
-from collections import deque
 
 import numpy as np
 import pygame
 import pyqtgraph as pg
-from PyQt5.QtCore import Qt, QTimer, QPointF, QRectF
-from PyQt5.QtGui import QColor, QPainter, QPen, QPolygonF, QFont
+from PyQt5.QtCore import Qt, QTimer, QRectF
+from PyQt5.QtGui import QColor, QPainter, QPen, QFont
 from PyQt5.QtWidgets import (
     QApplication, QCheckBox, QDoubleSpinBox, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QProgressBar, QPushButton, QSlider, QVBoxLayout,
@@ -39,6 +38,7 @@ DRONE_IP = "192.168.4.1"   # point d'acces de l'ESP32
 CMD_PORT = 8889            # localPort dans include/AppConfig.h
 RC_PERIOD_MS = 20          # 50 Hz d'envoi des commandes pilote
 UI_PERIOD_MS = 33          # ~30 Hz de rafraichissement graphique
+TEXT_DIVIDER = 6           # les libelles verbeux ne bougent qu'un tick sur 6
 N = 300                    # points affiches par courbe
 
 # Amplitude envoyee au firmware sur les axes roll/pitch. Le firmware divise par
@@ -59,7 +59,9 @@ BTN_STOP, BTN_ARM, BTN_DISARM = 0, 3, 1   # Croix / Triangle / Cercle
 # message dont la perte serait vraiment genante, on le repete.
 STOP_REPEAT = 5
 
-pg.setConfigOptions(antialias=True)
+# L'antialiasing des courbes coute cher pour 8 traces de 300 points redessinees
+# en continu : c'est la premiere cause de saccades sur cette IHM.
+pg.setConfigOptions(antialias=False)
 
 
 def deadzone(v: float) -> float:
@@ -111,7 +113,9 @@ class Gamepad:
         if self.js is None:
             return False
         try:
-            pygame.event.pump()
+            # get() vide la file ; pump() la laisse se remplir jusqu'a saturation
+            # et le traitement des evenements accumules finit par couter cher.
+            pygame.event.get()
             self.axes = [self.js.get_axis(i) for i in range(self.js.get_numaxes())]
             new = [self.js.get_button(i) for i in range(self.js.get_numbuttons())]
         except pygame.error:
@@ -132,88 +136,18 @@ class Gamepad:
 
 
 # ---------------------------------------------------------------------------
-#  Horizon artificiel
-# ---------------------------------------------------------------------------
-class AttitudeIndicator(QWidget):
-    """Vue ciel/sol classique : le pitch translate, le roll fait tourner."""
-
-    PX_PER_DEG = 4.0
-
-    def __init__(self):
-        super().__init__()
-        self.setMinimumSize(220, 220)
-        self.roll = 0.0
-        self.pitch = 0.0
-
-    def set_attitude(self, roll: float, pitch: float):
-        self.roll, self.pitch = roll, pitch
-        self.update()
-
-    def paintEvent(self, _event):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing)
-
-        side = min(self.width(), self.height())
-        cx, cy = self.width() / 2, self.height() / 2
-        r = side / 2 - 6
-
-        p.setClipRect(self.rect())
-        p.translate(cx, cy)
-
-        # Ciel et sol : un seul grand rectangle par moitie, deborde volontairement
-        # pour rester plein quel que soit l'angle.
-        p.save()
-        p.rotate(-self.roll)
-        p.translate(0, self.pitch * self.PX_PER_DEG)
-        big = side * 2
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(40, 110, 190))
-        p.drawRect(QRectF(-big, -big, 2 * big, big))
-        p.setBrush(QColor(120, 80, 40))
-        p.drawRect(QRectF(-big, 0, 2 * big, big))
-
-        p.setPen(QPen(QColor(235, 235, 235), 2))
-        p.drawLine(int(-big), 0, int(big), 0)
-
-        # Echelle de tangage tous les 10 deg.
-        p.setPen(QPen(QColor(220, 220, 220), 1))
-        p.setFont(QFont("Menlo", 8))
-        for deg in range(-40, 50, 10):
-            if deg == 0:
-                continue
-            y = -deg * self.PX_PER_DEG
-            half = 30 if deg % 20 == 0 else 16
-            p.drawLine(-half, int(y), half, int(y))
-            if deg % 20 == 0:
-                p.drawText(half + 4, int(y) + 4, f"{deg}")
-        p.restore()
-
-        # Reticule fixe : repere de l'appareil, il ne bouge jamais.
-        p.setPen(QPen(QColor(255, 210, 0), 3))
-        p.drawLine(int(-r * 0.6), 0, int(-r * 0.2), 0)
-        p.drawLine(int(r * 0.2), 0, int(r * 0.6), 0)
-        p.drawEllipse(QRectF(-3, -3, 6, 6))
-
-        # Index de roulis en haut, solidaire du boitier.
-        p.setPen(QPen(QColor(255, 210, 0), 2))
-        tri = QPolygonF([
-            QPointF(0, -r + 2),
-            QPointF(-7, -r + 14),
-            QPointF(7, -r + 14),
-        ])
-        p.setBrush(QColor(255, 210, 0))
-        p.drawPolygon(tri)
-
-        p.setPen(QPen(QColor(180, 180, 180), 2))
-        p.setBrush(Qt.NoBrush)
-        p.drawEllipse(QRectF(-r, -r, 2 * r, 2 * r))
-
-
-# ---------------------------------------------------------------------------
 #  Barre signee (correction moteur, axes manette)
 # ---------------------------------------------------------------------------
 class SignedBar(QWidget):
     """Barre partant du centre : positif a droite, negatif a gauche."""
+
+    # Pinceaux partages : les recreer a chaque paintEvent est du gaspillage pur.
+    BG = QColor(35, 35, 40)
+    POS = QColor(80, 200, 120)
+    NEG = QColor(220, 90, 90)
+    AXIS = QPen(QColor(120, 120, 130), 1)
+    TEXT = QColor(230, 230, 230)
+    FONT = QFont("Menlo", 9)
 
     def __init__(self, span: float = 100.0):
         super().__init__()
@@ -223,6 +157,10 @@ class SignedBar(QWidget):
         self.value = 0.0
 
     def set_value(self, v: float):
+        # Sous le demi-pourcent d'echelle le rendu serait identique au pixel
+        # pres : on evite un repaint pour rien a chaque tick.
+        if abs(v - self.value) < self.span * 0.005:
+            return
         self.value = v
         self.update()
 
@@ -231,19 +169,19 @@ class SignedBar(QWidget):
         w, h = self.width(), self.height()
         mid = w / 2
 
-        p.fillRect(0, 0, w, h, QColor(35, 35, 40))
+        p.fillRect(0, 0, w, h, self.BG)
         ratio = max(-1.0, min(1.0, self.value / self.span))
         length = ratio * (mid - 2)
-        color = QColor(80, 200, 120) if ratio >= 0 else QColor(220, 90, 90)
+        color = self.POS if ratio >= 0 else self.NEG
         if length >= 0:
             p.fillRect(QRectF(mid, 2, length, h - 4), color)
         else:
             p.fillRect(QRectF(mid + length, 2, -length, h - 4), color)
 
-        p.setPen(QPen(QColor(120, 120, 130), 1))
+        p.setPen(self.AXIS)
         p.drawLine(int(mid), 0, int(mid), h)
-        p.setPen(QColor(230, 230, 230))
-        p.setFont(QFont("Menlo", 9))
+        p.setPen(self.TEXT)
+        p.setFont(self.FONT)
         p.drawText(self.rect(), Qt.AlignCenter, f"{self.value:+.0f}")
 
 
@@ -326,9 +264,20 @@ class Pilot(QWidget):
         self.last_rc = (0, 0, 0, 0)
         self.tele = None             # derniere trame recue
 
+        # La boucle RC tourne a 50 Hz mais ne touche aucun widget : elle depose
+        # ici ce que la boucle d'affichage ira lire a 30 Hz. Sans ca, chaque tick
+        # RC declenchait un setText + quatre repaints, d'ou les saccades.
+        self.sticks = (0.0, 0.0, 0.0, 0.0)    # roll, pitch, yaw, gaz
+        self.rc_text = "rc 0 0 0 0"
+        self._rc_shown = None
+        self._text_tick = 0
+
         self.x = np.arange(N)
-        self.bufs = {k: deque([0.0] * N, maxlen=N) for k in
+        # Tampons numpy fixes : plus d'allocation ni de conversion deque->array
+        # a chaque rafraichissement.
+        self.bufs = {k: np.zeros(N) for k in
                      ("roll", "pitch", "cr", "cp", "m1", "m2", "m3", "m4")}
+        self._curves_dirty = False
 
         root = QHBoxLayout(self)
         root.addLayout(self._build_left(), 0)
@@ -474,10 +423,6 @@ class Pilot(QWidget):
         col = QVBoxLayout()
         col.setSpacing(8)
 
-        top = QHBoxLayout()
-        self.horizon = AttitudeIndicator()
-        top.addWidget(self.horizon, 1)
-
         box = QGroupBox("Correction PID par moteur (gaz exclus)")
         g = QGridLayout(box)
         self.motor_bars = []
@@ -488,8 +433,7 @@ class Pilot(QWidget):
             self.motor_bars.append(bar)
             g.addWidget(QLabel(place), i, 0)
             g.addWidget(bar, i, 1)
-        top.addWidget(box, 1)
-        col.addLayout(top, 0)
+        col.addWidget(box, 0)
 
         self.p_angle = self._plot("Angles mesures (deg)")
         self.p_angle.addLegend()
@@ -517,6 +461,12 @@ class Pilot(QWidget):
             pw.enableAutoRange(axis="y")
         else:
             pw.setYRange(-60, 60)
+        # L'axe X est fige sur la fenetre glissante : sans ca pyqtgraph
+        # recalcule l'etendue a chaque setData.
+        pw.setXRange(0, N - 1, padding=0)
+        pw.setMouseEnabled(x=False, y=auto)
+        pw.hideButtons()
+        pw.setMenuEnabled(False)
         return pw
 
     # ---- armement --------------------------------------------------------
@@ -542,10 +492,10 @@ class Pilot(QWidget):
             try:
                 self.tx.sendto(b"stop", (DRONE_IP, CMD_PORT))
             except OSError as e:
-                self.lbl_rc.setText(f"stop  [echec: {e}]")
+                self.rc_text = f"stop  [echec: {e}]"
                 break
         else:
-            self.lbl_rc.setText(f"stop  (x{STOP_REPEAT})")
+            self.rc_text = f"stop  (x{STOP_REPEAT})"
         self._paint_armed()
 
     def _paint_armed(self):
@@ -562,13 +512,14 @@ class Pilot(QWidget):
 
     # ---- emission --------------------------------------------------------
     def send_rc(self, left, forward, up, yaw):
+        """Emet la trame RC. L'affichage est laisse a ui_tick (voir rc_text)."""
         self.last_rc = (left, forward, up, yaw)
         msg = f"rc {left} {forward} {up} {yaw}"
-        self.lbl_rc.setText(msg)
         try:
             self.tx.sendto(msg.encode(), (DRONE_IP, CMD_PORT))
         except OSError as e:
-            self.lbl_rc.setText(f"{msg}   [echec: {e}]")
+            msg = f"{msg}   [echec: {e}]"
+        self.rc_text = msg
 
     def send_pid(self):
         kp, ki, kd = (self.gains[k].value() for k in ("kp", "ki", "kd"))
@@ -597,8 +548,7 @@ class Pilot(QWidget):
             # une consigne nulle en continu tant que la manette manque.
             self.throttle = 0.0
             self.send_rc(0, 0, 0, 0)
-            for bar in self.pad_bars.values():
-                bar.set_value(0.0)
+            self.sticks = (0.0, 0.0, 0.0, 0.0)
             return
 
         # Le stop prime sur tout le reste : teste en premier.
@@ -630,25 +580,28 @@ class Pilot(QWidget):
         self.send_rc(left, forward, int(round(self.throttle)),
                      int(round(yaw * YAW_RANGE)))
 
-        self.pad_bars["roll"].set_value(roll)
-        self.pad_bars["pitch"].set_value(pitch)
-        self.pad_bars["yaw"].set_value(yaw)
-        self.pad_bars["thr"].set_value(thr_stick)
+        self.sticks = (roll, pitch, yaw, thr_stick)
 
     # ---- boucle d'affichage (30 Hz) -------------------------------------
+    def _push(self, key, value):
+        """Decale le tampon d'un cran et depose la nouvelle mesure a la fin."""
+        buf = self.bufs[key]
+        buf[:-1] = buf[1:]
+        buf[-1] = value
+
     def ui_tick(self):
         for f in self.link.poll():
             self.tele = f
-            self.bufs["roll"].append(f.roll)
-            self.bufs["pitch"].append(f.pitch)
-            self.bufs["cr"].append(f.corr_roll)
-            self.bufs["cp"].append(f.corr_pitch)
+            self._curves_dirty = True
+            self._push("roll", f.roll)
+            self._push("pitch", f.pitch)
+            self._push("cr", f.corr_roll)
+            self._push("cp", f.corr_pitch)
             for i in range(4):
-                self.bufs[f"m{i+1}"].append(f.motors[i])
+                self._push(f"m{i+1}", f.motors[i])
 
         if self.tele is not None:
             t = self.tele
-            self.horizon.set_attitude(t.roll, t.pitch)
             self.readouts["roll"].setText(f"{t.roll:+7.2f} deg")
             self.readouts["pitch"].setText(f"{t.pitch:+7.2f} deg")
             self.readouts["cr"].setText(f"{t.corr_roll:+7.2f}")
@@ -656,15 +609,33 @@ class Pilot(QWidget):
             for i, bar in enumerate(self.motor_bars):
                 bar.set_value(t.motors[i])
 
-        b = {k: np.array(v) for k, v in self.bufs.items()}
-        self.c_roll.setData(self.x, b["roll"])
-        self.c_pitch.setData(self.x, b["pitch"])
-        self.c_cr.setData(self.x, b["cr"])
-        self.c_cp.setData(self.x, b["cp"])
-        for i, curve in enumerate(self.c_mot):
-            curve.setData(self.x, b[f"m{i+1}"])
+        # Sans nouvelle trame les courbes sont deja a jour : redessiner huit
+        # traces pour un resultat identique ne ferait que manger du temps.
+        if self._curves_dirty:
+            self._curves_dirty = False
+            self.c_roll.setData(self.x, self.bufs["roll"])
+            self.c_pitch.setData(self.x, self.bufs["pitch"])
+            self.c_cr.setData(self.x, self.bufs["cr"])
+            self.c_cp.setData(self.x, self.bufs["cp"])
+            for i, curve in enumerate(self.c_mot):
+                curve.setData(self.x, self.bufs[f"m{i+1}"])
 
+        roll, pitch, yaw, thr_stick = self.sticks
+        self.pad_bars["roll"].set_value(roll)
+        self.pad_bars["pitch"].set_value(pitch)
+        self.pad_bars["yaw"].set_value(yaw)
+        self.pad_bars["thr"].set_value(thr_stick)
+
+        if self.rc_text != self._rc_shown:
+            self._rc_shown = self.rc_text
+            self.lbl_rc.setText(self.rc_text)
         self.bar_throttle.setValue(int(self.throttle))
+
+        # Le pave d'axes bruts est un outil de diagnostic : il passe par un
+        # QLabel a retour a la ligne, dont le relayout coute cher a 30 Hz.
+        self._text_tick += 1
+        if self._text_tick % TEXT_DIVIDER:
+            return
         if self.pad.connected:
             self.lbl_pad.setText(f"connectee : {self.pad.name}")
             self.lbl_axes.setText(
