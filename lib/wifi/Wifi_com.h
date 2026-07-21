@@ -28,6 +28,8 @@ public:
     // Renvoie un message texte au dernier client connu.
     bool answer(const char* msg, uint16_t port);
 
-    // Envoie 4 valeurs flottantes (télémétrie) au client par défaut.
-    bool answer_values(float v1, float v2, float v3, float v4, uint16_t port);
+    // Diffuse un message à tout le sous-réseau du point d'accès.
+    // Sert à pousser la télémétrie : les outils d'analyse la reçoivent sans
+    // avoir à se signaler, et plusieurs peuvent écouter en même temps.
+    bool broadcast(const char* msg, uint16_t port);
 };

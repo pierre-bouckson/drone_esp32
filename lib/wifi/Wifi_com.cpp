@@ -31,18 +31,16 @@ const char* drone_connect::read_msg() {
 bool drone_connect::answer(const char* msg, uint16_t port) {
     if (UDP.beginPacket(ip_client, port) != 1) return false;
     UDP.print(msg);
-    UDP.endPacket();
-    return true;
+    return UDP.endPacket() == 1;
 }
 
-bool drone_connect::answer_values(float v1, float v2, float v3, float v4, uint16_t port) {
-    if (UDP.beginPacket("192.168.4.2", port) != 1) return false;
+bool drone_connect::broadcast(const char* msg, uint16_t port) {
+    // Toujours en diffusion sur le sous-réseau de l'AP (192.168.4.255) plutôt
+    // qu'au dernier client : plusieurs outils d'analyse peuvent ainsi écouter
+    // en parallèle, sans avoir à émettre quoi que ce soit au préalable.
+    IPAddress dest(ip_esp[0], ip_esp[1], ip_esp[2], 255);
 
-    // Format texte : "v1,v2,v3,v4\n"
-    char buffer[64];
-    snprintf(buffer, sizeof(buffer), "%.6f,%.6f,%.6f,%.6f\n", v1, v2, v3, v4);
-
-    UDP.print(buffer);
-    UDP.endPacket();
-    return true;
+    if (UDP.beginPacket(dest, port) != 1) return false;
+    UDP.print(msg);
+    return UDP.endPacket() == 1;
 }

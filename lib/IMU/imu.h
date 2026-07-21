@@ -33,6 +33,11 @@ private:
     float         pitch     = 0.0f;
     unsigned long lastMicros = 0;
 
+    // Angles bruts de l'accéléromètre, conservés pour la télémétrie :
+    // les comparer à la sortie du filtre permet de juger du réglage de Kalman.
+    float roll_acc  = 0.0f;
+    float pitch_acc = 0.0f;
+
     data_imu orientation = {0.0f, 0.0f, 0.0f};
     bool     emergency   = false;
 
@@ -45,4 +50,8 @@ public:
 
     // Vrai si l'inclinaison a dépassé les seuils de sécurité.
     bool inEmergency() const { return emergency; }
+
+    // Angles non filtrés du dernier cycle (avant fusion Kalman).
+    float rollAcc()  const { return roll_acc; }
+    float pitchAcc() const { return pitch_acc; }
 };

@@ -13,11 +13,12 @@
 //    "rc <l> <f> <u> <yaw>" → commande pilote
 //    "gain <g>"             → gain
 //    "pid <kp> <ki> <kd>"   → coefficients PID
+//    "stop"                 → arrêt d'urgence demandé par le pilote
 // ============================================================================
 class CommandParser {
 
 public:
-    enum class Kind { None, Ping, Rc, Gain, Pid };
+    enum class Kind { None, Ping, Rc, Gain, Pid, Stop };
 
     // Décode un message et met à jour l'état interne. Renvoie son type.
     Kind parse(const char* msg);

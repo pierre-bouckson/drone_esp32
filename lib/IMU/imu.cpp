@@ -44,12 +44,12 @@ data_imu imu_sensor::get_orientation() {
     lastMicros = now;
 
     // Angles bruts issus de l'accéléromètre.
-    float rollAcc  = atan2(ay, az)                   * 180.0f / PI;
-    float pitchAcc = atan2(-ax, sqrt(ay*ay + az*az)) * 180.0f / PI;
+    roll_acc  = atan2(ay, az)                   * 180.0f / PI;
+    pitch_acc = atan2(-ax, sqrt(ay*ay + az*az)) * 180.0f / PI;
 
     // Fusion par filtre de Kalman.
-    roll  = kalmanRoll.update(rollAcc,  gx, dt);
-    pitch = kalmanPitch.update(pitchAcc, gy, dt);
+    roll  = kalmanRoll.update(roll_acc,  gx, dt);
+    pitch = kalmanPitch.update(pitch_acc, gy, dt);
 
     // roll et pitch sont déjà en degrés : on compare directement aux seuils.
     if (abs(roll) > MAX_ROLL_DEG || abs(pitch) > MAX_PITCH_DEG) {

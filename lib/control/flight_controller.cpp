@@ -37,6 +37,11 @@ bool FlightController::update(const msg_rc& rc, const data_imu& orientation,
     motor_cmd corr = mix(corr_roll, corr_pitch);
     int throttle = rc.up;
 
+    // Mémorisé pour la télémétrie (avant l'ajout des gaz).
+    last_corr_roll  = corr_roll;
+    last_corr_pitch = corr_pitch;
+    last_corr       = corr;
+
     out.motor_1_duty = throttle * THROTTLE_GAIN + corr.motor_1_duty;
     out.motor_2_duty = throttle * THROTTLE_GAIN + corr.motor_2_duty;
     out.motor_3_duty = throttle * THROTTLE_GAIN + corr.motor_3_duty;

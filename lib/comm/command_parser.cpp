@@ -32,5 +32,10 @@ CommandParser::Kind CommandParser::parse(const char* msg) {
         }
     }
 
+    if (strncmp(msg, "stop", 4) == 0) {
+        Serial.println("msg stop detecter");
+        return Kind::Stop;
+    }
+
     return Kind::None;
 }

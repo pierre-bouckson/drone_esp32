@@ -22,6 +22,11 @@ private:
     pid pid_;
     unsigned long last_time = 0;
 
+    // Dernières corrections calculées, mémorisées pour la télémétrie.
+    float     last_corr_roll  = 0.0f;
+    float     last_corr_pitch = 0.0f;
+    motor_cmd last_corr       = {0, 0, 0, 0};
+
     // Convertit les corrections de roll/pitch en contributions par moteur.
     static motor_cmd mix(float roll_corr, float pitch_corr);
 
@@ -31,4 +36,11 @@ public:
     // (premier appel ou dt hors plage) : la commande précédente reste alors active.
     bool update(const msg_rc& rc, const data_imu& orientation,
                 const coef_pid& coef, motor_cmd& out);
+
+    // Sortie des PID du dernier cycle valide, en degrés/s.
+    float roll_correction()  const { return last_corr_roll; }
+    float pitch_correction() const { return last_corr_pitch; }
+
+    // Contribution des PID à chaque moteur, gaz exclus.
+    const motor_cmd& motor_correction() const { return last_corr; }
 };
